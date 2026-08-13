@@ -1,0 +1,98 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+
+    <title>Anker Turbo</title>
+
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+
+  <body>
+    <div class="header">
+      <div class="title">Anker Turbo</div>
+
+      <div class="version">v1.3</div>
+    </div>
+
+    <!-- ===================================================== -->
+    <!-- DELAY -->
+    <!-- ===================================================== -->
+
+    <div class="section">
+      <div class="label">Delay</div>
+
+      <div class="input-row">
+        <input id="delay" type="number" min="100" max="10000" step="50" />
+
+        <span class="unit"> ms </span>
+      </div>
+
+      <div class="hint">Thời gian giữa mỗi task</div>
+    </div>
+
+    <!-- ===================================================== -->
+    <!-- CONCURRENT -->
+    <!-- ===================================================== -->
+
+    <div class="section">
+      <div class="label">Concurrent Tabs</div>
+
+      <div class="input-row">
+        <input id="concurrent" type="number" min="1" max="50" step="1" />
+
+        <span class="unit"> tabs </span>
+      </div>
+
+      <div class="hint">Số task chạy cùng lúc</div>
+    </div>
+
+    <!-- ===================================================== -->
+    <!-- BLANK RELOAD -->
+    <!-- ===================================================== -->
+
+    <div class="section">
+      <div class="label">Blank Reload</div>
+
+      <div class="input-row">
+        <input
+          id="blankReload"
+          type="number"
+          min="1000"
+          max="60000"
+          step="500"
+        />
+        <div>a</div>
+        <span class="unit"> ms </span>
+      </div>
+
+      <div class="hint">Thời gian chờ khi task bị trắng trước khi reload</div>
+    </div>
+
+    <!-- ===================================================== -->
+    <!-- MAX AUTO RELOAD -->
+    <!-- ===================================================== -->
+
+    <div class="section">
+      <div class="label">Max Auto Reload</div>
+
+      <div class="input-row">
+        <input id="maxAutoReload" type="number" min="0" max="20" step="1" />
+
+        <span class="unit"> times </span>
+      </div>
+
+      <div class="hint">Số lần tối đa reload một task bị trắng</div>
+    </div>
+
+    <!-- ===================================================== -->
+    <!-- SAVE -->
+    <!-- ===================================================== -->
+
+    <button id="save">SAVE</button>
+
+    <div id="status"></div>
+
+    <script src="popup.js"></script>
+  </body>
+</html>

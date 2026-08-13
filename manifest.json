@@ -1,0 +1,49 @@
+{
+  "manifest_version": 3,
+  "name": "Anker Turbo Background Review",
+  "version": "2.0.0",
+  "description": "Anker Turbo Background Review with concurrent task queue.",
+  "permissions": [
+    "tabs",
+    "storage",
+    "alarms"
+  ],
+  "host_permissions": [
+    "https://aidc-annotation-us.anker-in.com/*",
+    "https://aidc-annotation-eu.anker-in.com/*",
+    "https://aidc-annotation-cn.anker-in.com/*"
+  ],
+  "action": {
+    "default_title": "Anker Turbo",
+    "default_popup": "popup.html"
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://aidc-annotation-us.anker-in.com/*",
+        "https://aidc-annotation-eu.anker-in.com/*",
+        "https://aidc-annotation-cn.anker-in.com/*"
+      ],
+      "js": [
+        "main.js"
+      ],
+      "run_at": "document_start",
+      "world": "MAIN"
+    },
+    {
+      "matches": [
+        "https://aidc-annotation-us.anker-in.com/*",
+        "https://aidc-annotation-eu.anker-in.com/*",
+        "https://aidc-annotation-cn.anker-in.com/*"
+      ],
+      "js": [
+        "bridge.js"
+      ],
+      "run_at": "document_start",
+      "world": "ISOLATED"
+    }
+  ]
+}
