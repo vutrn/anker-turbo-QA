@@ -527,6 +527,13 @@ async function fillPendingTasks() {
     fillingQueue = false;
   }
 
+  console.log(
+  "%c[Anker Turbo] POOL",
+  "color:#722ed1;font-weight:bold",
+  `pending=${pendingTasks.length}`,
+  pendingTasks.map((x) => x.recordId),
+);
+
   notifyController();
 }
 
