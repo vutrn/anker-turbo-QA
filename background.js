@@ -509,6 +509,8 @@ async function fillPendingTasks() {
       // ĐẶT COOLDOWN CHO LẦN MỞ TIẾP THEO
       // -------------------------------------------------
 
+      await notifyController();
+
       nextTaskOpenAllowedAt = Date.now() + settings.delay;
 
       await persistState();
@@ -527,6 +529,18 @@ async function fillPendingTasks() {
 
   notifyController();
 }
+
+// =========================================================
+// BUMP COOLDOWN (gọi cả khi OPEN lẫn khi CLOSE)
+// =========================================================
+async function bumpCooldown() {
+  const settings = await getSettings();
+  const candidate = Date.now() + settings.delay;
+  if (candidate > nextTaskOpenAllowedAt) {
+    nextTaskOpenAllowedAt = candidate;
+  }
+}
+
 // =========================================================
 // SUBMIT SUCCESS
 // =========================================================
@@ -557,11 +571,11 @@ async function handleTaskSubmitSuccess(tabId) {
   // ---------------------------------------------------------
 
   removeTaskMapping(tabId);
-
+  await bumpCooldown();
   await persistState();
 
   // ---------------------------------------------------------
-  // Close
+  // Close tab
   // ---------------------------------------------------------
 
   try {
@@ -578,7 +592,6 @@ async function handleTaskSubmitSuccess(tabId) {
 
   await notifyController({
     type: "CLOSED_TASK",
-
     recordId,
   });
 
@@ -587,7 +600,6 @@ async function handleTaskSubmitSuccess(tabId) {
   // ---------------------------------------------------------
 
   await fillPendingTasks();
-
   return true;
 }
 
@@ -609,9 +621,7 @@ async function handleInvalidTaskPage(tabId) {
   }
 
   task.handled = true;
-
   task.invalid = true;
-
   task.status = "invalid";
 
   const recordId = String(task.recordId);
@@ -621,7 +631,7 @@ async function handleInvalidTaskPage(tabId) {
   // ---------------------------------------------------------
 
   removeTaskMapping(tabId);
-
+  await bumpCooldown();
   await persistState();
 
   // ---------------------------------------------------------
@@ -663,7 +673,7 @@ async function handleTabClosed(tabId) {
   }
 
   removeTaskMapping(tabId);
-
+  await bumpCooldown();
   await persistState();
 
   // ---------------------------------------------------------
