@@ -53,34 +53,26 @@
   let nextButton = null;
 
   // =========================================================
-  // LOAD AUTO RELOAD SETTINGS
+  // AUTO RELOAD SETTINGS (via bridge, vì main.js chạy MAIN world)
   // =========================================================
 
-  async function loadAutoReloadSettings() {
-    try {
-      const result = await chrome.storage.local.get([
-        "blankReload",
-        "maxAutoReload",
-      ]);
+  function requestAutoReloadSettings() {
+    window.postMessage(
+      { __ankerExtension: true, type: "GET_AUTO_RELOAD_SETTINGS" },
+      "*",
+    );
+  }
 
-      const blankReload = Number(result.blankReload);
+  function applyAutoReloadSettings(blankReload, maxReload) {
+    const b = Number(blankReload);
+    const m = Number(maxReload);
 
-      const maxReload = Number(result.maxAutoReload);
+    if (Number.isFinite(b)) {
+      annotationLoadTimeout = Math.max(1000, Math.min(60000, Math.round(b)));
+    }
 
-      if (Number.isFinite(blankReload)) {
-        annotationLoadTimeout = Math.max(
-          1000,
-          Math.min(60000, Math.round(blankReload)),
-        );
-      }
-
-      if (Number.isFinite(maxReload)) {
-        maxAutoReload = Math.max(0, Math.min(20, Math.round(maxReload)));
-      }
-    } catch (_) {
-      annotationLoadTimeout = DEFAULT_ANNOTATION_LOAD_TIMEOUT;
-
-      maxAutoReload = DEFAULT_MAX_AUTO_RELOAD;
+    if (Number.isFinite(m)) {
+      maxAutoReload = Math.max(0, Math.min(20, Math.round(m)));
     }
   }
 
@@ -737,6 +729,18 @@
       return;
     }
 
+    // AUTO RELOAD SETTINGS
+
+    if (data.type === "AUTO_RELOAD_SETTINGS_RESPONSE") {
+      applyAutoReloadSettings(data.blankReload, data.maxAutoReload);
+      return;
+    }
+
+    if (data.type === "AUTO_RELOAD_SETTINGS_CHANGED") {
+      applyAutoReloadSettings(data.blankReload, data.maxAutoReload);
+      return;
+    }
+
     // -------------------------------------------------
     // CLOSED TASK
     //
@@ -1150,7 +1154,7 @@
 
     invalidTaskReported = false;
 
-    await loadAutoReloadSettings();
+    requestAutoReloadSettings();
 
     startMultipleTaskWarningWatcher();
 

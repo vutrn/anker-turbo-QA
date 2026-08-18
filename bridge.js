@@ -174,6 +174,31 @@ window.addEventListener("message", (event) => {
 
     return;
   }
+
+  // =====================================================
+  // GET DELAY
+  // =====================================================
+
+  if (data.type === "GET_AUTO_RELOAD_SETTINGS") {
+    try {
+      chrome.storage.local
+        .get(["blankReload", "maxAutoReload"])
+        .then((result) => {
+          window.postMessage(
+            {
+              __ankerExtension: true,
+              type: "AUTO_RELOAD_SETTINGS_RESPONSE",
+              blankReload: result.blankReload,
+              maxAutoReload: result.maxAutoReload,
+            },
+            "*",
+          );
+        })
+        .catch(() => {});
+    } catch (_) {}
+
+    return;
+  }
 });
 
 // =========================================================
@@ -252,3 +277,29 @@ try {
 } catch (_) {
   // Ignore
 }
+
+// =========================================================
+// LIVE UPDATE: AUTO RELOAD SETTINGS   <-- THÊM MỚI TỪ ĐÂY
+// =========================================================
+
+try {
+  chrome.storage.onChanged.addListener((changes, area) => {
+    if (area !== "local") return;
+
+    if (!changes.blankReload && !changes.maxAutoReload) return;
+
+    window.postMessage(
+      {
+        __ankerExtension: true,
+        type: "AUTO_RELOAD_SETTINGS_CHANGED",
+        blankReload: changes.blankReload
+          ? changes.blankReload.newValue
+          : undefined,
+        maxAutoReload: changes.maxAutoReload
+          ? changes.maxAutoReload.newValue
+          : undefined,
+      },
+      "*",
+    );
+  });
+} catch (_) {}

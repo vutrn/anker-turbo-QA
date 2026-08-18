@@ -103,7 +103,7 @@ Extension gồm 3 lớp chính:
 1. Người dùng mở trang **worker-job**, extension chèn nút điều khiển và đăng ký tab hiện tại làm **controller**.
 2. Bấm **START QUEUE** → quét danh sách task khả dụng → gửi sang background để mở tab song song theo giới hạn `Concurrent Tabs`.
 3. Mỗi tab task được background theo dõi trạng thái (qua hook fetch/XHR và DOM watcher trong `main.js`).
-4. Khi task submit thành công / bị phát hiện lỗi / hoặc bị đóng thủ công → background dọn dẹp, thông báo về worker tab → worker tab tự động quét và bù task mới vào chỗ trống, có tôn trọng độ trễ cấu hình.
+4. Khi task submit thành công / bị phát hiện lỗi / hoặc bị đóng thủ công → background dọn dẹp, thông báo về worker tab → worker tab tự động quét và bù task mới vào chỗ trống, có độ trễ cấu hình.
 5. Trạng thái hàng đợi (`QUEUE_STATUS`) được đồng bộ liên tục về giao diện nút bấm trên trang worker.
 
 ---
