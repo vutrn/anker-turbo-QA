@@ -914,10 +914,8 @@
     if (maxAutoReload <= 0) {
       if (annotationWatcher) {
         clearInterval(annotationWatcher);
-
         annotationWatcher = null;
       }
-
       return;
     }
 
@@ -930,10 +928,8 @@
 
       if (annotationWatcher) {
         clearInterval(annotationWatcher);
-
         annotationWatcher = null;
       }
-
       return;
     }
 
@@ -945,6 +941,18 @@
     } catch (_) {}
 
     important("RELOAD BLANK TASK", `${count + 1}/${maxAutoReload}`);
+
+    // -----------------------------------------------------
+    // QUAN TRỌNG:
+    // Dừng watcher NGAY trước khi reload, để trang cũ
+    // (vẫn có thể còn sống vài trăm ms trong lúc chờ
+    // điều hướng) không tự trigger thêm reload liên tiếp.
+    // -----------------------------------------------------
+
+    if (annotationWatcher) {
+      clearInterval(annotationWatcher);
+      annotationWatcher = null;
+    }
 
     location.reload();
   }
