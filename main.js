@@ -106,6 +106,14 @@
   }
 
   // =========================================================
+  // TASK TAB CHECK
+  // =========================================================
+
+  function isTaskPage() {
+    return location.pathname === "/ssr/qa-task-start";
+  }
+
+  // =========================================================
   // GET CURRENT RECORD ID
   // =========================================================
 
@@ -1147,25 +1155,26 @@
     if (isWorkerJobPage()) {
       if (document.body) {
         createUI();
-
         registerController();
-
         requestTurboDelay();
       }
+      return;
+    }
 
+    // =====================================================
+    // ONLY TASK TAB
+    // /ssr/qa-task-start
+    // =====================================================
+
+    if (!isTaskPage()) {
       return;
     }
 
     // Task page
-
     submitSuccessReported = false;
-
     invalidTaskReported = false;
-
     requestAutoReloadSettings();
-
     startMultipleTaskWarningWatcher();
-
     startAnnotationWatcher();
   }
 

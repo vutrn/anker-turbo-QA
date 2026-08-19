@@ -226,7 +226,7 @@ try {
 
       console.log(
         "%c[Anker Turbo] CLOSED TASK → " + recordId,
-        "color:#52c41a;font-weight:bold",
+        "color:#3368A0;font-weight:bold",
       );
 
       window.postMessage(
