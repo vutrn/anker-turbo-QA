@@ -74,6 +74,48 @@ const taskTabs = new Map();
 const recordToTab = new Map();
 
 // =========================================================
+// QUEUE RECONCILIATION
+// =========================================================
+
+function getPendingRecordSet() {
+  return new Set(
+    pendingTasks
+      .filter((task) => task && task.recordId)
+      .map((task) => String(task.recordId)),
+  );
+}
+
+function reconcileQueueRecords() {
+  const activeIds = new Set(recordToTab.keys());
+  const seen = new Set();
+
+  pendingTasks = pendingTasks.filter((task) => {
+    if (!task || !task.recordId || !task.url) {
+      return false;
+    }
+
+    const recordId = String(task.recordId);
+
+    // Task đang mở thì không được tồn tại trong pending.
+    if (activeIds.has(recordId)) {
+      return false;
+    }
+
+    // Không cho duplicate trong pending pool.
+    if (seen.has(recordId)) {
+      return false;
+    }
+
+    seen.add(recordId);
+
+    task.recordId = recordId;
+    task.url = String(task.url);
+
+    return true;
+  });
+}
+
+// =========================================================
 // LOCK
 // =========================================================
 
@@ -203,6 +245,7 @@ async function restoreState() {
     // -----------------------------------------------------
 
     await reconcileTabsInternal();
+    reconcileQueueRecords();
 
     await persistState();
   } catch (error) {
@@ -375,6 +418,8 @@ function removeTaskMapping(tabId) {
 
   recordToTab.delete(String(task.recordId));
 
+  reconcileQueueRecords();
+
   return task;
 }
 
@@ -387,6 +432,10 @@ function appendPendingTasks(tasks) {
     return;
   }
 
+  reconcileQueueRecords();
+
+  const pendingIds = getPendingRecordSet();
+
   for (const task of tasks) {
     if (!task || !task.recordId || !task.url) {
       continue;
@@ -394,26 +443,36 @@ function appendPendingTasks(tasks) {
 
     const recordId = String(task.recordId);
 
-    // Already active
+    // ================================================
+    // 1. TASK ĐANG ACTIVE
+    // ================================================
+
     if (recordToTab.has(recordId)) {
       continue;
     }
 
-    // Already pending
-    const exists = pendingTasks.some(
-      (item) => String(item.recordId) === recordId,
-    );
+    // ================================================
+    // 2. TASK ĐANG PENDING
+    // ================================================
 
-    if (exists) {
+    if (pendingIds.has(recordId)) {
       continue;
     }
 
+    // ================================================
+    // 3. ADD VÀO POOL
+    // ================================================
+
     pendingTasks.push({
       recordId,
-
       url: String(task.url),
     });
+
+    pendingIds.add(recordId);
   }
+
+  // Dọn duplicate lần cuối.
+  reconcileQueueRecords();
 }
 
 // =========================================================
@@ -443,14 +502,17 @@ async function fillPendingTasks() {
   try {
     const settings = await getSettings();
 
+    // Reconcile trước khi bắt đầu mở.
+    reconcileQueueRecords();
+
     while (
       queueEnabled &&
       taskTabs.size < settings.concurrent &&
       pendingTasks.length > 0
     ) {
-      // -------------------------------------------------
+      // ================================================
       // COOLDOWN
-      // -------------------------------------------------
+      // ================================================
 
       const now = Date.now();
 
@@ -460,7 +522,10 @@ async function fillPendingTasks() {
         await sleep(wait);
       }
 
-      // Queue có thể đã STOP trong lúc chờ
+      // ================================================
+      // CHECK SAU KHI WAIT
+      // ================================================
+
       if (!queueEnabled) {
         break;
       }
@@ -473,9 +538,24 @@ async function fillPendingTasks() {
         break;
       }
 
-      // -------------------------------------------------
+      // ================================================
+      // RECONCILE LẠI
+      //
+      // Quan trọng vì trong lúc sleep có thể:
+      // - task khác vừa mở
+      // - task vừa đóng
+      // - worker gửi FILL_QUEUE
+      // ================================================
+
+      reconcileQueueRecords();
+
+      if (!pendingTasks.length) {
+        break;
+      }
+
+      // ================================================
       // LẤY TASK
-      // -------------------------------------------------
+      // ================================================
 
       const task = pendingTasks.shift();
 
@@ -485,41 +565,44 @@ async function fillPendingTasks() {
 
       const recordId = String(task.recordId);
 
-      // -------------------------------------------------
-      // DUPLICATE
-      // -------------------------------------------------
+      // ================================================
+      // FINAL DUPLICATE GUARD
+      // ================================================
 
+      // Task đang active.
       if (recordToTab.has(recordId)) {
         continue;
       }
 
-      // -------------------------------------------------
+      // Task bị duplicate trong pending.
+      if (pendingTasks.some((item) => String(item.recordId) === recordId)) {
+        continue;
+      }
+
+      // ================================================
       // OPEN
-      // -------------------------------------------------
+      // ================================================
 
       const opened = await openTask(task);
 
       if (!opened) {
         pendingTasks.unshift(task);
 
+        // Dọn lại pool.
+        reconcileQueueRecords();
+
         break;
       }
 
-      // -------------------------------------------------
-      // ĐẶT COOLDOWN CHO LẦN MỞ TIẾP THEO
-      // -------------------------------------------------
+      // ================================================
+      // COOLDOWN
+      // ================================================
 
       await notifyController();
 
       nextTaskOpenAllowedAt = Date.now() + settings.delay;
 
       await persistState();
-
-      // -------------------------------------------------
-      // Không cần sleep ở đây nữa.
-      // Vòng lặp tiếp theo sẽ tự chờ
-      // tới nextTaskOpenAllowedAt.
-      // -------------------------------------------------
     }
   } catch (error) {
     console.error("[Anker Turbo] fillPendingTasks error:", error);
@@ -527,12 +610,14 @@ async function fillPendingTasks() {
     fillingQueue = false;
   }
 
+  reconcileQueueRecords();
+
   console.log(
-  "%c[Anker Turbo] POOL",
-  "color:#722ed1;font-weight:bold",
-  `pending=${pendingTasks.length}`,
-  pendingTasks.map((x) => x.recordId),
-);
+    "%c[Anker Turbo] POOL",
+    "color:#722ed1;font-weight:bold",
+    `pending=${pendingTasks.length}`,
+    pendingTasks.map((x) => x.recordId),
+  );
 
   notifyController();
 }
@@ -566,9 +651,7 @@ async function handleTaskSubmitSuccess(tabId) {
   }
 
   task.handled = true;
-
   task.submitting = true;
-
   task.status = "submitted";
 
   const recordId = String(task.recordId);
@@ -623,43 +706,54 @@ async function handleInvalidTaskPage(tabId) {
     return false;
   }
 
-  if (task.handled || task.invalid) {
-    return false;
+  if (task) {
+    if (task.handled || task.invalid) {
+      return false;
+    }
+
+    task.handled = true;
+    task.invalid = true;
+    task.status = "invalid";
+
+    const recordId = String(task.recordId);
+
+    removeTaskMapping(tabId);
+    await bumpCooldown();
+    await persistState();
+
+    try {
+      await chrome.tabs.remove(tabId);
+    } catch (_) {}
+
+    await sleep(150);
+
+    await notifyController({
+      type: "CLOSED_TASK",
+      recordId,
+    });
+
+    await fillPendingTasks();
+
+    return true;
   }
 
-  task.handled = true;
-  task.invalid = true;
-  task.status = "invalid";
-
-  const recordId = String(task.recordId);
-
   // ---------------------------------------------------------
-  // Remove mapping
+  // FALLBACK:
+  // Tab không có trong taskTabs (SW restart mất mapping,
+  // hoặc tab mở ngoài luồng queue quản lý). Vẫn đóng tab để
+  // tránh tồn đọng warning vĩnh viễn, không chờ đợi vô ích.
   // ---------------------------------------------------------
 
-  removeTaskMapping(tabId);
-  await bumpCooldown();
-  await persistState();
-
-  // ---------------------------------------------------------
-  // Close invalid tab
-  // ---------------------------------------------------------
+  console.warn(
+    "[Anker Turbo] INVALID_TASK_PAGE trên tab không được track:",
+    tabId,
+  );
 
   try {
     await chrome.tabs.remove(tabId);
   } catch (_) {}
 
-  await sleep(150);
-
-  // ---------------------------------------------------------
-  // Worker can scan again
-  // ---------------------------------------------------------
-
-  await notifyController({
-    type: "CLOSED_TASK",
-
-    recordId,
-  });
+  await bumpCooldown();
 
   await fillPendingTasks();
 
@@ -822,7 +916,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         if (!queueEnabled) {
           sendResponse({
             ok: false,
-
             error: "Queue is stopped",
           });
 
@@ -833,7 +926,15 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           setController(sender.tab.id);
         }
 
+        // ================================================
+        // RECONCILE TRƯỚC KHI NHẬN TASK MỚI
+        // ================================================
+
+        reconcileQueueRecords();
+
         appendPendingTasks(message.tasks || []);
+
+        reconcileQueueRecords();
 
         await persistState();
 
@@ -841,16 +942,17 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
         sendResponse({
           ok: true,
-
           activeTabs: taskTabs.size,
-
           pending: pendingTasks.length,
+          activeRecords: [...taskTabs.values()].map((task) =>
+            String(task.recordId),
+          ),
+          pendingRecords: pendingTasks.map((task) => String(task.recordId)),
         });
       })
       .catch((error) => {
         sendResponse({
           ok: false,
-
           error: String(error),
         });
       });
@@ -986,15 +1088,19 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
   if (message.type === "GET_QUEUE_STATUS") {
     stateReady.then(getSettings).then((settings) => {
+      reconcileQueueRecords();
+
       sendResponse({
         ok: true,
-
         activeTabs: taskTabs.size,
-
         pending: pendingTasks.length,
 
-        concurrent: settings.concurrent,
+        activeRecords: [...taskTabs.values()].map((task) =>
+          String(task.recordId),
+        ),
 
+        pendingRecords: pendingTasks.map((task) => String(task.recordId)),
+        concurrent: settings.concurrent,
         delay: settings.delay,
       });
     });
@@ -1017,37 +1123,33 @@ async function notifyController(extra = {}) {
   try {
     const settings = await getSettings();
 
+    // Luôn reconcile trước khi gửi status về Worker.
+    reconcileQueueRecords();
+
     const activeTasks = [...taskTabs.values()];
 
-    await chrome.tabs.sendMessage(
-      controllerTabId,
+    await chrome.tabs.sendMessage(controllerTabId, {
+      type: extra.type || "QUEUE_STATUS",
+      recordId: extra.recordId || null,
+      activeTabs: activeTasks.length,
+      queue: pendingTasks.length,
+      concurrent: settings.concurrent,
+      delay: settings.delay,
 
-      {
-        type: extra.type || "QUEUE_STATUS",
+      // Task đang mở thật sự.
+      activeRecords: activeTasks.map((task) => String(task.recordId)),
 
-        recordId: extra.recordId || null,
+      // Task đang nằm trong pool.
+      pendingRecords: pendingTasks.map((task) => String(task.recordId)),
 
-        activeTabs: activeTasks.length,
-
-        queue: pendingTasks.length,
-
-        concurrent: settings.concurrent,
-
-        delay: settings.delay,
-
-        activeRecords: activeTasks.map((task) => String(task.recordId)),
-
-        activeTasks: activeTasks.map((task) => ({
-          tabId: task.tabId,
-
-          recordId: task.recordId,
-
-          status: task.status,
-        })),
-      },
-    );
+      activeTasks: activeTasks.map((task) => ({
+        tabId: task.tabId,
+        recordId: task.recordId,
+        status: task.status,
+      })),
+    });
   } catch (_) {
-    // Worker đang reload/chưa ready
+    // Worker đang reload/chưa ready.
   }
 }
 

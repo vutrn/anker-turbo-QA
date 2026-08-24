@@ -45,7 +45,10 @@
   let currentRecordId = null;
 
   let activeTaskRecords = new Set();
+  let pendingTaskRecords = new Set();
+
   let activeTaskCount = 0;
+  let pendingTaskCount = 0;
 
   let openedCount = 0;
   let completedCount = 0;
@@ -628,12 +631,13 @@
     queueRunning = false;
 
     openedCount = 0;
-
     completedCount = 0;
 
     activeTaskRecords.clear();
+    pendingTaskRecords.clear();
 
     activeTaskCount = 0;
+    pendingTaskCount = 0;
 
     window.postMessage(
       {
@@ -680,7 +684,19 @@
     for (const row of rows) {
       const recordId = String(row.dataset.rowKey);
 
+      // ================================================
+      // TASK ĐANG ACTIVE
+      // ================================================
+
       if (activeTaskRecords.has(recordId)) {
+        continue;
+      }
+
+      // ================================================
+      // TASK ĐANG NẰM TRONG PENDING POOL
+      // ================================================
+
+      if (pendingTaskRecords.has(recordId)) {
         continue;
       }
 
@@ -789,9 +805,31 @@
     if (data.type === "QUEUE_STATUS") {
       activeTaskCount = Number(data.activeTabs) || 0;
 
+      // ================================================
+      // ACTIVE TASKS
+      // ================================================
+
       if (Array.isArray(data.activeRecords)) {
         activeTaskRecords = new Set(data.activeRecords.map(String));
       }
+
+      // ================================================
+      // PENDING TASKS
+      // ================================================
+
+      if (Array.isArray(data.pendingRecords)) {
+        pendingTaskRecords = new Set(data.pendingRecords.map(String));
+
+        pendingTaskCount = pendingTaskRecords.size;
+      } else {
+        pendingTaskRecords.clear();
+
+        pendingTaskCount = Number(data.queue) || 0;
+      }
+
+      // ================================================
+      // AUTO FILL
+      // ================================================
 
       if (queueRunning) {
         const concurrent = Number(data.concurrent) || 1;
@@ -1220,7 +1258,9 @@
       openedCount,
       completedCount,
       activeTaskCount,
+      pendingTaskCount,
       activeRecords: [...activeTaskRecords],
+      pendingRecords: [...pendingTaskRecords],
       submitSuccessReported,
       invalidTaskReported,
       delay: turboDelay,

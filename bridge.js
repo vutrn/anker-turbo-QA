@@ -72,7 +72,6 @@ window.addEventListener("message", (event) => {
   if (data.type === "FILL_QUEUE") {
     sendToBackground({
       type: "FILL_QUEUE",
-
       tasks: Array.isArray(data.tasks) ? data.tasks : [],
     });
 
@@ -248,29 +247,20 @@ try {
     // QUEUE STATUS
     // =================================================
 
-    if (message.type !== "QUEUE_STATUS") {
-      return;
-    }
+    if (message.type !== "QUEUE_STATUS") return;
 
     window.postMessage(
       {
         __ankerExtension: true,
-
         type: "QUEUE_STATUS",
-
         activeTabs: message.activeTabs || 0,
-
         queue: message.queue || 0,
-
         concurrent: message.concurrent || 0,
-
         delay: message.delay || 600,
-
         activeRecords: message.activeRecords || [],
-
+        pendingRecords: message.pendingRecords || [],
         activeTasks: message.activeTasks || [],
       },
-
       "*",
     );
   });
