@@ -501,6 +501,54 @@
   }
 
   // =========================================================
+  // GET VISIBLE ROW STATUS MAP (trang hiện tại)
+  //
+  // Lấy toàn bộ recordId đang hiển thị trên trang hiện tại,
+  // kèm theo việc nó đã hoàn thành (Reviewed / Passed /
+  // Unqualified) hay chưa. Dùng để quyết định prune pool
+  // theo 2 điều kiện:
+  //
+  // 1. Không còn hiển thị trên trang hiện tại nữa → prune.
+  // 2. Vẫn hiển thị nhưng đã hoàn thành (Reviewed/Passed/
+  //    Unqualified) → cũng prune, vì task đã xong không cần
+  //    mở tab nữa dù nó chưa kịp biến mất khỏi bảng.
+  // =========================================================
+
+  function getVisibleRowStatusMap() {
+    const rows = [
+      ...document.querySelectorAll("tbody.ant-table-tbody tr.ant-table-row"),
+    ];
+
+    const map = new Map();
+
+    for (const row of rows) {
+      if (row.getAttribute("aria-hidden") === "true") continue;
+
+      const recordId = row.dataset.rowKey;
+      if (!recordId) continue;
+
+      const cells = row.querySelectorAll("td.ant-table-cell");
+      if (cells.length < 5) continue;
+
+      const dataStatus = cells[2].textContent.trim().toLowerCase();
+      const reviewConclusion = cells[3].textContent.trim().toLowerCase();
+
+      // Reviewed = đã có kết luận (Passed hoặc Unqualified).
+      // Kiểm tra cả dataStatus lẫn reviewConclusion để chắc chắn
+      // không bỏ sót trường hợp nào.
+
+      const completed =
+        dataStatus === "reviewed" ||
+        reviewConclusion === "passed" ||
+        reviewConclusion === "unqualified";
+
+      map.set(String(recordId), { completed });
+    }
+
+    return map;
+  }
+
+  // =========================================================
   // CREATE REVIEW URL
   // =========================================================
 
@@ -675,10 +723,6 @@
 
     const rows = getReviewRows();
 
-    if (!rows.length) {
-      return;
-    }
-
     const tasks = [];
 
     for (const row of rows) {
@@ -710,6 +754,46 @@
         recordId,
         url,
       });
+    }
+
+    // ================================================
+    // PRUNE: loại khỏi pending pool nếu:
+    //
+    // 1. Không còn hiển thị trên trang hiện tại (đã chuyển
+    //    trang, task rời khỏi view hiện tại), HOẶC
+    // 2. Vẫn hiển thị nhưng đã hoàn thành (Reviewed / Passed /
+    //    Unqualified) - task xong rồi thì không cần mở tab
+    //    nữa dù nó chưa kịp biến mất khỏi bảng.
+    // ================================================
+
+    const visibleStatusMap = getVisibleRowStatusMap();
+
+    const toPrune = [];
+
+    for (const recordId of pendingTaskRecords) {
+      const info = visibleStatusMap.get(recordId);
+
+      // Điều kiện 1: không còn hiển thị trên trang hiện tại
+      if (!info) {
+        toPrune.push(recordId);
+        continue;
+      }
+
+      // Điều kiện 2: vẫn hiển thị nhưng đã hoàn thành
+      if (info.completed) {
+        toPrune.push(recordId);
+      }
+    }
+
+    if (toPrune.length) {
+      window.postMessage(
+        {
+          __ankerExtension: true,
+          type: "PRUNE_POOL",
+          recordIds: toPrune,
+        },
+        "*",
+      );
     }
 
     if (!tasks.length) {
@@ -944,10 +1028,6 @@
       sessionStorage.removeItem("anker_annotation_reload_count");
     } catch (_) {}
   }
-
-  // =========================================================
-  // RELOAD BLANK TASK
-  // =========================================================
 
   // =========================================================
   // RELOAD BLANK TASK

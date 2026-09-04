@@ -346,7 +346,6 @@ async function openTask(task) {
 
   if (existingTabId !== undefined) {
     const existingTask = taskTabs.get(existingTabId);
-
     if (existingTask) {
       return null;
     }
@@ -998,6 +997,47 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
       sendResponse({
         ok: true,
+      });
+    });
+
+    return true;
+  }
+
+  // =====================================================
+  // PRUNE POOL
+  // =====================================================
+
+  if (message.type === "PRUNE_POOL") {
+    stateReady.then(async () => {
+      const ids = new Set(
+        (Array.isArray(message.recordIds) ? message.recordIds : []).map(String),
+      );
+
+      if (ids.size) {
+        const before = pendingTasks.length;
+
+        pendingTasks = pendingTasks.filter(
+          (task) => !ids.has(String(task.recordId)),
+        );
+
+        const removed = before - pendingTasks.length;
+
+        if (removed > 0) {
+          console.log(
+            "%c[Anker Turbo] PRUNE POOL",
+            "color:#eb2f96;font-weight:bold",
+            `removed=${removed}`,
+          );
+
+          await persistState();
+
+          notifyController();
+        }
+      }
+
+      sendResponse({
+        ok: true,
+        pending: pendingTasks.length,
       });
     });
 

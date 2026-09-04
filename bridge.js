@@ -103,6 +103,19 @@ window.addEventListener("message", (event) => {
   }
 
   // =====================================================
+  // PRUNE POOL
+  // =====================================================
+
+  if (data.type === "PRUNE_POOL") {
+    sendToBackground({
+      type: "PRUNE_POOL",
+      recordIds: Array.isArray(data.recordIds) ? data.recordIds : [],
+    });
+
+    return;
+  }
+
+  // =====================================================
   // TASK SUBMIT SUCCESS
   //
   // Task tab:
