@@ -1198,35 +1198,9 @@
 
     stopButton.onclick = stopQueue;
 
-    // RESET
-
-    const resetButton = document.createElement("button");
-
-    resetButton.textContent = "RESET";
-
-    Object.assign(resetButton.style, {
-      padding: "12px 18px",
-
-      background: "#ff4d4f",
-
-      color: "#fff",
-
-      border: "none",
-
-      borderRadius: "6px",
-
-      fontWeight: "bold",
-
-      cursor: "pointer",
-    });
-
-    resetButton.onclick = resetQueue;
-
     container.appendChild(nextButton);
 
     container.appendChild(stopButton);
-
-    container.appendChild(resetButton);
 
     document.body.appendChild(container);
 
