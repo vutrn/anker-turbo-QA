@@ -13,6 +13,9 @@
   const DEFAULT_TURBO_DELAY = 600;
   const MIN_TURBO_DELAY = 100;
 
+  // Selector cho loại tool cũ (dùng iframe cố định). Loại tool
+  // mới không có iframe được nhận diện riêng trong
+  // isAnnotationLoaded() qua .record-container + <video>.
   const ANNOTATION_IFRAME_SELECTOR =
     'iframe[src="/ssr/tools/video-track-v2.html"]';
 
@@ -1002,7 +1005,26 @@
   // =========================================================
 
   function isAnnotationLoaded() {
-    return !!document.querySelector(ANNOTATION_IFRAME_SELECTOR);
+    // Loại tool cũ: nội dung nằm trong iframe cố định.
+    if (document.querySelector(ANNOTATION_IFRAME_SELECTOR)) {
+      return true;
+    }
+
+    // Loại tool mới (ví dụ video-qualify): không dùng iframe,
+    // nội dung được Vue render trực tiếp vào .record-container
+    // kèm theo ít nhất 1 thẻ <video> có nguồn phát thực sự.
+    // Nếu trang thật sự bị trắng (lỗi tải), .record-container
+    // sẽ không tồn tại hoặc không có video nào bên trong.
+    const recordContainer = document.querySelector(".record-container");
+
+    if (
+      recordContainer &&
+      recordContainer.querySelector("video source[src], video[src]")
+    ) {
+      return true;
+    }
+
+    return false;
   }
 
   // =========================================================
@@ -1121,6 +1143,172 @@
         reloadAnnotationPage();
       }
     }, ANNOTATION_CHECK_INTERVAL);
+  }
+
+  // =========================================================
+  // VIDEO PRELOAD & AUTOPLAY (task tab chạy nền)
+  //
+  // Task được mở nền (active: false) nên video có thể chưa tải
+  // dữ liệu. Khi chuyển qua tab đó, ta muốn video đã sẵn sàng
+  // và tự phát ngay, không cần bấm play thủ công.
+  //
+  // GHI CHÚ QUAN TRỌNG (đã kiểm chứng qua Network tab thực tế):
+  // - Gán Blob URL vào video.src bị chặn bởi Content Security
+  //   Policy của trang (media-src chỉ cho phép http/https,
+  //   không cho phép blob:) - không dùng cách này được.
+  // - Server (Aliyun OSS) không gửi Cache-Control, kèm theo
+  //   Content-Disposition: attachment và x-oss-force-download:
+  //   true. Ban đầu tưởng điều này nghĩa là server chặn cache
+  //   hoàn toàn, nhưng thực tế Chrome vẫn cache được nhờ cơ chế
+  //   "heuristic caching" (tính thời gian cache dựa trên header
+  //   Last-Modified khi thiếu Cache-Control, theo RFC 7234) -
+  //   đã xác nhận qua Network tab thấy request tiếp theo trả về
+  //   "206 Partial Content (from disk cache)".
+  // - Request ban đầu của <video> chạy gần như đồng thời với
+  //   fetch() làm nóng cache, nên thường KHÔNG kịp hưởng cache
+  //   (giống việc bạn quan sát: lần đầu mở tab chưa cache, phải
+  //   tự reload tab thì mới thấy cache hoạt động). Thay vì bắt
+  //   người dùng tự reload, code tự động gọi lại video.load()
+  //   ngay khi fetch() làm nóng cache hoàn tất, giúp <video> tải
+  //   lại và ăn cache mà không cần thao tác gì thêm - miễn là
+  //   video chưa bắt đầu phát (paused, currentTime = 0) để
+  //   không làm gián đoạn nếu người dùng đã lỡ xem dở.
+  // - Vẫn có thể có trường hợp bạn chuyển tab quá nhanh, trước
+  //   khi fetch() kịp hoàn tất - lúc đó video phát bằng dữ liệu
+  //   đã tải được tới thời điểm đó (vẫn theo cơ chế gốc của
+  //   <video>, không có gì bị hỏng, chỉ là chưa tối ưu). Giảm
+  //   số "Concurrent Tabs" trong settings giúp mỗi video có
+  //   nhiều băng thông hơn, tăng khả năng fetch() hoàn tất kịp
+  //   trước khi bạn chuyển sang tab đó.
+  //
+  // Lưu ý về chính sách autoplay của trình duyệt: gọi
+  // video.play() mà không mute gần như chắc chắn bị chặn vì
+  // không có "user gesture" trực tiếp. Do đó video được mute
+  // trước khi phát tự động; người dùng có thể tự bấm unmute
+  // trên thanh điều khiển nếu cần nghe âm thanh.
+  // =========================================================
+
+  const preloadedVideos = new WeakSet();
+
+  function getVideoOriginalSrc(video) {
+    if (video.currentSrc) {
+      return video.currentSrc;
+    }
+
+    const source = video.querySelector("source[src]");
+
+    if (source) {
+      return source.src;
+    }
+
+    return video.src || null;
+  }
+
+  async function warmVideoNetworkCache(video) {
+    const originalSrc = getVideoOriginalSrc(video);
+
+    if (!originalSrc) {
+      return;
+    }
+
+    try {
+      const response = await fetch(originalSrc, {
+        priority: "high",
+      });
+
+      if (!response.ok) {
+        return;
+      }
+
+      // Đọc hết toàn bộ nội dung để chắc chắn dữ liệu được tải
+      // đầy đủ và có cơ hội được trình duyệt lưu vào disk cache
+      // (theo cơ chế heuristic caching dựa trên Last-Modified).
+      // Kết quả này bị bỏ đi ngay - KHÔNG gán vào video.src để
+      // tránh vi phạm Content Security Policy (media-src) của
+      // trang.
+      await response.arrayBuffer();
+
+      // ============================================
+      // TỰ ĐỘNG "RELOAD" VIDEO NGAY SAU KHI CACHE NÓNG
+      //
+      // Request ban đầu của <video> chạy đua song song với
+      // fetch() ở trên nên thường KHÔNG kịp hưởng cache (vì
+      // cache chưa tồn tại lúc đó). Thay vì bắt người dùng tự
+      // reload tab để <video> tải lại và ăn cache, ta chủ động
+      // gọi video.load() ngay khi cache đã sẵn sàng - <video>
+      // sẽ tự tải lại đúng URL đó và lần này được phục vụ từ
+      // cache.
+      //
+      // Chỉ làm việc này nếu video CHƯA bắt đầu phát (còn đang
+      // paused ở đầu) để tránh làm gián đoạn nếu người dùng đã
+      // lỡ chuyển qua tab và đang xem dở.
+      // ============================================
+
+      if (document.contains(video) && video.paused && video.currentTime === 0) {
+        video.load();
+      }
+    } catch (_) {
+      // Fetch thất bại (CORS, network...) - video vẫn tải bình
+      // thường qua cơ chế mặc định của thẻ <video>, không có gì
+      // bị ảnh hưởng thêm.
+    }
+  }
+
+  function prepareVideoForPreload(video) {
+    if (preloadedVideos.has(video)) {
+      return;
+    }
+
+    preloadedVideos.add(video);
+
+    try {
+      video.preload = "auto";
+      video.muted = true;
+      video.load();
+    } catch (_) {}
+
+    warmVideoNetworkCache(video);
+  }
+
+  function scanAndPreloadVideos() {
+    document.querySelectorAll("video").forEach(prepareVideoForPreload);
+  }
+
+  function playAllVideos() {
+    document.querySelectorAll("video").forEach((video) => {
+      const playPromise = video.play();
+
+      if (playPromise && typeof playPromise.catch === "function") {
+        playPromise.catch(() => {
+          // Trình duyệt chặn autoplay - bỏ qua, người dùng bấm
+          // play thủ công.
+        });
+      }
+    });
+  }
+
+  function startVideoPreloadAndAutoplay() {
+    // Quét ngay lần đầu (video có thể đã có sẵn trong HTML từ
+    // server render).
+    scanAndPreloadVideos();
+
+    // Video được Vue render/thay thế động sau khi script tải
+    // xong, nên cần theo dõi DOM để bắt các video xuất hiện
+    // sau này.
+    const observer = new MutationObserver(scanAndPreloadVideos);
+
+    observer.observe(document.documentElement, {
+      childList: true,
+      subtree: true,
+    });
+
+    // Tab task được mở nền -> khi người dùng chuyển qua xem,
+    // trình duyệt bắn visibilitychange -> phát video ngay.
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "visible") {
+        playAllVideos();
+      }
+    });
   }
 
   // =========================================================
@@ -1268,6 +1456,7 @@
     requestAutoReloadSettings();
     startMultipleTaskWarningWatcher();
     startAnnotationWatcher();
+    startVideoPreloadAndAutoplay();
   }
 
   // =========================================================
