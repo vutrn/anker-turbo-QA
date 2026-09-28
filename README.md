@@ -28,6 +28,7 @@ Extension gồm 3 lớp chính:
 - **STOP QUEUE**: dừng nhận task mới, xoá toàn bộ pending tasks (tab đang mở vẫn tiếp tục chạy).
 - **RESET QUEUE**: reset toàn bộ trạng thái queue (dừng + xoá pending).
 - Giới hạn số tab chạy song song (**Concurrent Tabs**, mặc định 3, tối đa 50).
+- Có tuỳ chọn mở task trong một cửa sổ Chrome riêng; khi tắt, task mở cùng cửa sổ với worker.
 - Giãn cách thời gian giữa các lần mở tab mới (**Delay**, mặc định 600ms) để tránh mở ồ ạt gây treo máy.
 - Tự động "bù" tab mới ngay khi một tab task hoàn thành/đóng, để luôn duy trì đúng số lượng tab đang chạy song song.
 

@@ -38,6 +38,8 @@ const RECONCILE_ALARM = "ankerTurboReconcile";
 
 let controllerTabId = null;
 
+let taskWindowId = null;
+
 let queueEnabled = false;
 
 let pendingTasks = [];
@@ -135,6 +137,7 @@ async function getSettings() {
   const result = await chrome.storage.local.get([
     "turboDelay",
     "concurrentTabs",
+    "separateTaskWindow",
   ]);
 
   let delay = Number(result.turboDelay);
@@ -153,6 +156,8 @@ async function getSettings() {
     delay: Math.max(100, delay),
 
     concurrent: Math.max(1, Math.min(50, Math.round(concurrent))),
+
+    separateTaskWindow: result.separateTaskWindow !== false,
   };
 }
 
@@ -188,6 +193,10 @@ async function restoreState() {
 
     controllerTabId = Number.isInteger(saved.controllerTabId)
       ? saved.controllerTabId
+      : null;
+
+    taskWindowId = Number.isInteger(saved.taskWindowId)
+      ? saved.taskWindowId
       : null;
 
     pendingTasks = Array.isArray(saved.pendingTasks)
@@ -303,6 +312,8 @@ async function persistState() {
 
         controllerTabId,
 
+        taskWindowId,
+
         nextTaskOpenAllowedAt,
 
         pendingTasks: pendingTasks.map((task) => ({
@@ -354,17 +365,51 @@ async function openTask(task) {
   }
 
   // ---------------------------------------------------------
-  // Create background tab
+  // Create the first task in a separate Chrome window and reuse it.
   // ---------------------------------------------------------
 
   try {
-    const tab = await chrome.tabs.create({
-      url: task.url,
+    const settings = await getSettings();
 
-      active: false,
-    });
+    let tab;
+
+    if (!settings.separateTaskWindow) {
+      tab = await chrome.tabs.create({
+        url: task.url,
+        active: false,
+      });
+    } else {
+      if (taskWindowId !== null) {
+        try {
+          await chrome.windows.get(taskWindowId);
+        } catch (_) {
+          taskWindowId = null;
+        }
+      }
+
+      if (taskWindowId === null) {
+        const taskWindow = await chrome.windows.create({
+          url: task.url,
+          focused: false,
+        });
+
+        if (!taskWindow || taskWindow.id === undefined) {
+          return null;
+        }
+
+        taskWindowId = taskWindow.id;
+        tab = taskWindow.tabs?.[0];
+      } else {
+        tab = await chrome.tabs.create({
+          windowId: taskWindowId,
+          url: task.url,
+          active: false,
+        });
+      }
+    }
 
     if (!tab || tab.id === undefined) {
+      taskWindowId = null;
       return null;
     }
 
@@ -416,6 +461,10 @@ function removeTaskMapping(tabId) {
   taskTabs.delete(tabId);
 
   recordToTab.delete(String(task.recordId));
+
+  if (taskTabs.size === 0) {
+    taskWindowId = null;
+  }
 
   reconcileQueueRecords();
 

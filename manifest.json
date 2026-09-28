@@ -28,6 +28,9 @@
         "https://aidc-annotation-cn.anker-in.com/*"
       ],
       "js": [
+        "content/api-hook.js",
+        "content/annotation-watcher.js",
+        "content/video-preload.js",
         "main.js"
       ],
       "run_at": "document_start",

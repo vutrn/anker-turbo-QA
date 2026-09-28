@@ -9,6 +9,7 @@ const DEFAULT_CONCURRENT = 3;
 
 const DEFAULT_BLANK_RELOAD = 8000;
 const DEFAULT_MAX_AUTO_RELOAD = 3;
+const DEFAULT_SEPARATE_TASK_WINDOW = true;
 
 // =========================================================
 // LIMITS
@@ -38,6 +39,8 @@ const blankReloadInput = document.getElementById("blankReload");
 
 const maxAutoReloadInput = document.getElementById("maxAutoReload");
 
+const separateTaskWindowInput = document.getElementById("separateTaskWindow");
+
 const saveButton = document.getElementById("save");
 
 const status = document.getElementById("status");
@@ -53,6 +56,7 @@ async function loadSettings() {
       "concurrentTabs",
       "blankReload",
       "maxAutoReload",
+      "separateTaskWindow",
     ]);
 
     // -----------------------------------------------------
@@ -123,6 +127,11 @@ async function loadSettings() {
     blankReloadInput.value = String(blankReload);
 
     maxAutoReloadInput.value = String(maxAutoReload);
+
+    separateTaskWindowInput.checked =
+      result.separateTaskWindow === undefined
+        ? DEFAULT_SEPARATE_TASK_WINDOW
+        : Boolean(result.separateTaskWindow);
   } catch (error) {
     console.error("[Anker Turbo] Failed to load settings:", error);
 
@@ -133,6 +142,8 @@ async function loadSettings() {
     blankReloadInput.value = String(DEFAULT_BLANK_RELOAD);
 
     maxAutoReloadInput.value = String(DEFAULT_MAX_AUTO_RELOAD);
+
+    separateTaskWindowInput.checked = DEFAULT_SEPARATE_TASK_WINDOW;
   }
 }
 
@@ -152,6 +163,8 @@ async function saveSettings() {
   let blankReload = Number(blankReloadInput.value);
 
   let maxAutoReload = Number(maxAutoReloadInput.value);
+
+  const separateTaskWindow = separateTaskWindowInput.checked;
 
   // -----------------------------------------------------
   // DELAY
@@ -227,9 +240,11 @@ async function saveSettings() {
       blankReload: blankReload,
 
       maxAutoReload: maxAutoReload,
+
+      separateTaskWindow: separateTaskWindow,
     });
 
-    status.textContent = `Saved: ${delay}ms / ${concurrent} tabs / Blank ${blankReload}ms / Max reload ${maxAutoReload}`;
+    status.textContent = "Settings saved";
 
     status.style.color = "#52c41a";
 

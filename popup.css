@@ -58,6 +58,28 @@ body {
   gap: 7px;
 }
 
+.option-row {
+  display: flex;
+
+  align-items: center;
+
+  gap: 8px;
+
+  font-size: 13px;
+
+  cursor: pointer;
+}
+
+.option-row input {
+  width: 16px;
+
+  height: 16px;
+
+  margin: 0;
+
+  accent-color: #1677ff;
+}
+
 input {
   width: 170px;
 
