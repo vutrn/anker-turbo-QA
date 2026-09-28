@@ -6,12 +6,14 @@
 (function () {
   "use strict";
 
+  const AT = globalThis.AnkerTurbo;
+
   // =========================================================
   // CONFIG
   // =========================================================
 
-  const DEFAULT_TURBO_DELAY = 600;
-  const MIN_TURBO_DELAY = 100;
+  const DEFAULT_TURBO_DELAY = AT.DEFAULTS.delay;
+  const MIN_TURBO_DELAY = AT.LIMITS.delay[0];
 
   // =========================================================
   // STATE
@@ -28,8 +30,6 @@
 
   let openedCount = 0;
   let completedCount = 0;
-
-  let nextButton = null;
 
   // =========================================================
   // AUTO RELOAD SETTINGS (via bridge, vì main.js chạy MAIN world)
@@ -84,6 +84,8 @@
   function isTaskPage() {
     return location.pathname === "/ssr/qa-task-start";
   }
+
+  AT.task?.start();
 
   // =========================================================
   // GET CURRENT RECORD ID
@@ -151,173 +153,6 @@
     if (info.businessType) {
       detectedConfig.businessType = info.businessType;
     }
-  }
-
-  // =========================================================
-  // GET REVIEW ROWS
-  // =========================================================
-
-  function getReviewRows() {
-    return [
-      ...document.querySelectorAll("tbody.ant-table-tbody tr.ant-table-row"),
-    ].filter((row) => {
-      if (row.getAttribute("aria-hidden") === "true") {
-        return false;
-      }
-
-      const recordId = row.dataset.rowKey;
-
-      if (!recordId) {
-        return false;
-      }
-
-      const cells = row.querySelectorAll("td.ant-table-cell");
-
-      if (cells.length < 5) {
-        return false;
-      }
-
-      const dataStatus = cells[2].textContent.trim().toLowerCase();
-
-      const reviewConclusion = cells[3].textContent.trim().toLowerCase();
-
-      // Reviewed → không mở
-
-      if (dataStatus === "reviewed") {
-        return false;
-      }
-
-      // Passed → không mở
-
-      if (reviewConclusion === "passed") {
-        return false;
-      }
-
-      // Chỉ task chưa hoàn thành
-
-      const canReview =
-        dataStatus === "to be submitted" ||
-        dataStatus === "assigned for collection";
-
-      if (!canReview) {
-        return false;
-      }
-
-      // Review button
-
-      const reviewButton = cells[4].querySelector("button.ant-btn-link");
-
-      if (!reviewButton) {
-        return false;
-      }
-
-      if (reviewButton.textContent.trim().toLowerCase() !== "review") {
-        return false;
-      }
-
-      if (reviewButton.offsetParent === null) {
-        return false;
-      }
-
-      return true;
-    });
-  }
-
-  // =========================================================
-  // GET VISIBLE ROW STATUS MAP (trang hiện tại)
-  //
-  // Lấy toàn bộ recordId đang hiển thị trên trang hiện tại,
-  // kèm theo việc nó đã hoàn thành (Reviewed / Passed /
-  // Unqualified) hay chưa. Dùng để quyết định prune pool
-  // theo 2 điều kiện:
-  //
-  // 1. Không còn hiển thị trên trang hiện tại nữa → prune.
-  // 2. Vẫn hiển thị nhưng đã hoàn thành (Reviewed/Passed/
-  //    Unqualified) → cũng prune, vì task đã xong không cần
-  //    mở tab nữa dù nó chưa kịp biến mất khỏi bảng.
-  // =========================================================
-
-  function getVisibleRowStatusMap() {
-    const rows = [
-      ...document.querySelectorAll("tbody.ant-table-tbody tr.ant-table-row"),
-    ];
-
-    const map = new Map();
-
-    for (const row of rows) {
-      if (row.getAttribute("aria-hidden") === "true") continue;
-
-      const recordId = row.dataset.rowKey;
-      if (!recordId) continue;
-
-      const cells = row.querySelectorAll("td.ant-table-cell");
-      if (cells.length < 5) continue;
-
-      const dataStatus = cells[2].textContent.trim().toLowerCase();
-      const reviewConclusion = cells[3].textContent.trim().toLowerCase();
-
-      // Reviewed = đã có kết luận (Passed hoặc Unqualified).
-      // Kiểm tra cả dataStatus lẫn reviewConclusion để chắc chắn
-      // không bỏ sót trường hợp nào.
-
-      const completed =
-        dataStatus === "reviewed" ||
-        reviewConclusion === "passed" ||
-        reviewConclusion === "unqualified";
-
-      map.set(String(recordId), { completed });
-    }
-
-    return map;
-  }
-
-  // =========================================================
-  // CREATE REVIEW URL
-  // =========================================================
-
-  function createReviewUrl(recordId) {
-    const worker = getWorkerInfo();
-
-    if (!worker) {
-      return null;
-    }
-
-    const jobId = detectedConfig.jobId || worker.jobId;
-
-    const projectId = detectedConfig.projectId || worker.projectId;
-
-    const businessType =
-      detectedConfig.businessType || worker.businessType || "WORK";
-
-    const locale = detectedConfig.locale || "en-US";
-
-    const flowId = detectedConfig.flowId;
-
-    const title = detectedConfig.title;
-
-    if (!jobId || !projectId || !flowId || !title || !recordId) {
-      return null;
-    }
-
-    const url = new URL("/ssr/qa-task-start", location.origin);
-
-    url.searchParams.set("jobId", jobId);
-
-    url.searchParams.set("jobType", "REVIEW");
-
-    url.searchParams.set("locale", locale);
-
-    url.searchParams.set("flowId", flowId);
-
-    url.searchParams.set("title", title);
-
-    url.searchParams.set("projectId", projectId);
-
-    url.searchParams.set("recordId", recordId);
-
-    url.searchParams.set("businessType", businessType);
-
-    return url.href;
   }
 
   // =========================================================
@@ -444,7 +279,7 @@
       return;
     }
 
-    const rows = getReviewRows();
+    const rows = AT.worker.reviewRows.getReviewRows();
 
     const tasks = [];
 
@@ -467,7 +302,11 @@
         continue;
       }
 
-      const url = createReviewUrl(recordId);
+      const url = AT.worker.reviewUrl.createReviewUrl({
+        recordId,
+        detectedConfig,
+        getWorkerInfo,
+      });
 
       if (!url) {
         continue;
@@ -489,7 +328,7 @@
     //    nữa dù nó chưa kịp biến mất khỏi bảng.
     // ================================================
 
-    const visibleStatusMap = getVisibleRowStatusMap();
+    const visibleStatusMap = AT.worker.reviewRows.getVisibleRowStatusMap();
 
     const toPrune = [];
 
@@ -672,118 +511,19 @@
   // VIDEO PRELOAD & AUTOPLAY
   // =========================================================
 
-  // =========================================================
-  // CREATE UI
-  // =========================================================
-
   function createUI() {
-    if (document.getElementById("anker-next-review-container")) {
-      return;
-    }
-
-    const container = document.createElement("div");
-
-    container.id = "anker-next-review-container";
-
-    Object.assign(container.style, {
-      position: "fixed",
-
-      left: "20px",
-
-      bottom: "80px",
-
-      zIndex: "999999",
-
-      display: "flex",
-
-      gap: "8px",
+    AT.worker.ui.create({
+      onStart: startQueue,
+      onStop: stopQueue,
     });
-
-    // START
-
-    nextButton = document.createElement("button");
-
-    nextButton.textContent = "START QUEUE";
-
-    Object.assign(nextButton.style, {
-      padding: "12px 18px",
-
-      background: "#1677ff",
-
-      color: "#fff",
-
-      border: "none",
-
-      borderRadius: "6px",
-
-      fontWeight: "bold",
-
-      cursor: "pointer",
-    });
-
-    nextButton.onclick = startQueue;
-
-    // STOP
-
-    const stopButton = document.createElement("button");
-
-    stopButton.textContent = "STOP";
-
-    Object.assign(stopButton.style, {
-      padding: "12px 18px",
-
-      background: "#fa8c16",
-
-      color: "#fff",
-
-      border: "none",
-
-      borderRadius: "6px",
-
-      fontWeight: "bold",
-
-      cursor: "pointer",
-    });
-
-    stopButton.onclick = stopQueue;
-
-    container.appendChild(nextButton);
-
-    container.appendChild(stopButton);
-
-    document.body.appendChild(container);
-
     updateButton();
   }
 
-  // =========================================================
-  // UPDATE BUTTON
-  // =========================================================
-
   function updateButton() {
-    if (!nextButton) {
-      return;
-    }
-
-    if (queueRunning) {
-      nextButton.textContent = `RUNNING (${activeTaskCount})`;
-
-      nextButton.style.background = "#fa8c16";
-
-      return;
-    }
-
-    if (activeTaskCount > 0) {
-      nextButton.textContent = `PAUSED (${activeTaskCount})`;
-
-      nextButton.style.background = "#8c8c8c";
-
-      return;
-    }
-
-    nextButton.textContent = "START QUEUE";
-
-    nextButton.style.background = "#1677ff";
+    AT.worker.ui.update({
+      queueRunning,
+      activeTaskCount,
+    });
   }
 
   // =========================================================

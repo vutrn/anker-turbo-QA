@@ -1,5 +1,10 @@
 "use strict";
 
+const NEXT_TAB_MESSAGE =
+  globalThis.AnkerTurbo?.MSG?.NEXT_TAB || "NEXT_TAB";
+const HOTKEY_SETTINGS_REQUEST = "GET_HOTKEY_SETTINGS";
+const HOTKEY_SETTINGS_RESPONSE = "HOTKEY_SETTINGS_RESPONSE";
+
 // =========================================================
 // ANKER TURBO BRIDGE
 // =========================================================
@@ -208,6 +213,39 @@ window.addEventListener("message", (event) => {
         })
         .catch(() => {});
     } catch (_) {}
+
+    return;
+  }
+
+  if (data.type === HOTKEY_SETTINGS_REQUEST) {
+    try {
+      chrome.storage.local
+        .get(["hotkeyFail", "hotkeyPass"])
+        .then((result) => {
+          window.postMessage(
+            {
+              __ankerExtension: true,
+              type: HOTKEY_SETTINGS_RESPONSE,
+              hotkeyFail: result.hotkeyFail || "KeyE",
+              hotkeyPass: result.hotkeyPass || "KeyR",
+            },
+            "*",
+          );
+        })
+        .catch(() => {});
+    } catch (_) {}
+
+    return;
+  }
+
+  // =====================================================
+  // SWITCH TO NEXT TAB
+  // =====================================================
+
+  if (data.type === NEXT_TAB_MESSAGE) {
+    sendToBackground({
+      type: NEXT_TAB_MESSAGE,
+    });
 
     return;
   }

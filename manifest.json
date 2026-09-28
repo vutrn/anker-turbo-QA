@@ -28,9 +28,19 @@
         "https://aidc-annotation-cn.anker-in.com/*"
       ],
       "js": [
+        "src/shared/namespace.js",
+        "src/shared/constants.js",
+        "src/shared/settings.js",
+        "src/shared/logger.js",
         "content/api-hook.js",
         "content/annotation-watcher.js",
         "content/video-preload.js",
+        "src/content/task/video-speed.js",
+        "src/content/task/hotkeys.js",
+        "src/content/task/index.js",
+        "src/content/worker/review-rows.js",
+        "src/content/worker/review-url.js",
+        "src/content/worker/ui.js",
         "main.js"
       ],
       "run_at": "document_start",
@@ -43,6 +53,9 @@
         "https://aidc-annotation-cn.anker-in.com/*"
       ],
       "js": [
+        "src/shared/namespace.js",
+        "src/shared/constants.js",
+        "src/shared/settings.js",
         "bridge.js"
       ],
       "run_at": "document_start",

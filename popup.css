@@ -80,6 +80,26 @@ body {
   accent-color: #1677ff;
 }
 
+.shortcut-row {
+  display: flex;
+
+  align-items: center;
+
+  justify-content: space-between;
+
+  margin-bottom: 7px;
+
+  font-size: 13px;
+}
+
+.shortcut-row input {
+  width: 112px;
+
+  text-align: center;
+
+  cursor: pointer;
+}
+
 input {
   width: 170px;
 

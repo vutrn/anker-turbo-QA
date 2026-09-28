@@ -12,7 +12,7 @@
     <div class="header">
       <div class="title">Anker Turbo</div>
 
-      <div class="version">v1.3</div>
+      <div class="version">v2.0.0</div>
     </div>
 
     <!-- ===================================================== -->
@@ -54,6 +54,22 @@
       </label>
 
       <div class="hint">Worker vẫn ở cửa sổ hiện tại</div>
+    </div>
+
+    <div class="section shortcut-section">
+      <div class="label">Keyboard Shortcuts</div>
+
+      <div class="shortcut-row">
+        <span>Fail</span>
+        <input id="hotkeyFail" type="text" maxlength="12" readonly />
+      </div>
+
+      <div class="shortcut-row">
+        <span>Pass</span>
+        <input id="hotkeyPass" type="text" maxlength="12" readonly />
+      </div>
+
+      <div class="hint">Click an input, then press a key</div>
     </div>
 
     <!-- ===================================================== -->
@@ -101,6 +117,9 @@
 
     <div id="status"></div>
 
+    <script src="src/shared/namespace.js"></script>
+    <script src="src/shared/constants.js"></script>
+    <script src="src/shared/settings.js"></script>
     <script src="popup.js"></script>
   </body>
 </html>

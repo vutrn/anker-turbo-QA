@@ -1,31 +1,6 @@
 "use strict";
 
-// =========================================================
-// DEFAULTS
-// =========================================================
-
-const DEFAULT_DELAY = 600;
-const DEFAULT_CONCURRENT = 3;
-
-const DEFAULT_BLANK_RELOAD = 8000;
-const DEFAULT_MAX_AUTO_RELOAD = 3;
-const DEFAULT_SEPARATE_TASK_WINDOW = true;
-
-// =========================================================
-// LIMITS
-// =========================================================
-
-const MIN_DELAY = 100;
-const MAX_DELAY = 10000;
-
-const MIN_CONCURRENT = 1;
-const MAX_CONCURRENT = 50;
-
-const MIN_BLANK_RELOAD = 1000;
-const MAX_BLANK_RELOAD = 60000;
-
-const MIN_MAX_AUTO_RELOAD = 0;
-const MAX_MAX_AUTO_RELOAD = 20;
+const AT = globalThis.AnkerTurbo;
 
 // =========================================================
 // ELEMENTS
@@ -41,9 +16,38 @@ const maxAutoReloadInput = document.getElementById("maxAutoReload");
 
 const separateTaskWindowInput = document.getElementById("separateTaskWindow");
 
+const hotkeyFailInput = document.getElementById("hotkeyFail");
+
+const hotkeyPassInput = document.getElementById("hotkeyPass");
+
 const saveButton = document.getElementById("save");
 
 const status = document.getElementById("status");
+
+function formatHotkey(code) {
+  return String(code || "")
+    .replace(/^Key/, "")
+    .replace(/^Digit/, "")
+    .replace(/^Arrow/, "Arrow ");
+}
+
+function setHotkeyInput(input, code) {
+  input.dataset.code = code;
+  input.value = formatHotkey(code);
+}
+
+function captureHotkey(event) {
+  event.preventDefault();
+
+  if (event.key === "Control" || event.key === "Alt" || event.key === "Shift" || event.key === "Meta") {
+    return;
+  }
+
+  const code = AT.settings.normalizeHotkey(event.code, null);
+  if (!code) return;
+
+  setHotkeyInput(event.currentTarget, code);
+}
 
 // =========================================================
 // LOAD SETTINGS
@@ -52,98 +56,56 @@ const status = document.getElementById("status");
 async function loadSettings() {
   try {
     const result = await chrome.storage.local.get([
-      "turboDelay",
-      "concurrentTabs",
-      "blankReload",
-      "maxAutoReload",
-      "separateTaskWindow",
+      AT.STORAGE_KEYS.TURBO_DELAY,
+      AT.STORAGE_KEYS.CONCURRENT_TABS,
+      AT.STORAGE_KEYS.BLANK_RELOAD,
+      AT.STORAGE_KEYS.MAX_AUTO_RELOAD,
+      AT.STORAGE_KEYS.SEPARATE_TASK_WINDOW,
+      AT.STORAGE_KEYS.HOTKEY_FAIL,
+      AT.STORAGE_KEYS.HOTKEY_PASS,
     ]);
 
-    // -----------------------------------------------------
-    // DELAY
-    // -----------------------------------------------------
-
-    let delay = Number(result.turboDelay);
-
-    if (!Number.isFinite(delay)) {
-      delay = DEFAULT_DELAY;
-    }
-
-    delay = Math.max(MIN_DELAY, Math.min(MAX_DELAY, Math.round(delay)));
-
-    // -----------------------------------------------------
-    // CONCURRENT
-    // -----------------------------------------------------
-
-    let concurrent = Number(result.concurrentTabs);
-
-    if (!Number.isFinite(concurrent)) {
-      concurrent = DEFAULT_CONCURRENT;
-    }
-
-    concurrent = Math.max(
-      MIN_CONCURRENT,
-      Math.min(MAX_CONCURRENT, Math.round(concurrent)),
-    );
-
-    // -----------------------------------------------------
-    // BLANK RELOAD
-    // -----------------------------------------------------
-
-    let blankReload = Number(result.blankReload);
-
-    if (!Number.isFinite(blankReload)) {
-      blankReload = DEFAULT_BLANK_RELOAD;
-    }
-
-    blankReload = Math.max(
-      MIN_BLANK_RELOAD,
-      Math.min(MAX_BLANK_RELOAD, Math.round(blankReload)),
-    );
-
-    // -----------------------------------------------------
-    // MAX AUTO RELOAD
-    // -----------------------------------------------------
-
-    let maxAutoReload = Number(result.maxAutoReload);
-
-    if (!Number.isFinite(maxAutoReload)) {
-      maxAutoReload = DEFAULT_MAX_AUTO_RELOAD;
-    }
-
-    maxAutoReload = Math.max(
-      MIN_MAX_AUTO_RELOAD,
-      Math.min(MAX_MAX_AUTO_RELOAD, Math.round(maxAutoReload)),
-    );
+    const settings = AT.settings.normalize({
+      delay: result[AT.STORAGE_KEYS.TURBO_DELAY],
+      concurrent: result[AT.STORAGE_KEYS.CONCURRENT_TABS],
+      blankReload: result[AT.STORAGE_KEYS.BLANK_RELOAD],
+      maxAutoReload: result[AT.STORAGE_KEYS.MAX_AUTO_RELOAD],
+      separateTaskWindow: result[AT.STORAGE_KEYS.SEPARATE_TASK_WINDOW],
+      hotkeyFail: result[AT.STORAGE_KEYS.HOTKEY_FAIL],
+      hotkeyPass: result[AT.STORAGE_KEYS.HOTKEY_PASS],
+    });
 
     // -----------------------------------------------------
     // SHOW
     // -----------------------------------------------------
 
-    delayInput.value = String(delay);
+    delayInput.value = String(settings.delay);
 
-    concurrentInput.value = String(concurrent);
+    concurrentInput.value = String(settings.concurrent);
 
-    blankReloadInput.value = String(blankReload);
+    blankReloadInput.value = String(settings.blankReload);
 
-    maxAutoReloadInput.value = String(maxAutoReload);
+    maxAutoReloadInput.value = String(settings.maxAutoReload);
 
-    separateTaskWindowInput.checked =
-      result.separateTaskWindow === undefined
-        ? DEFAULT_SEPARATE_TASK_WINDOW
-        : Boolean(result.separateTaskWindow);
+    separateTaskWindowInput.checked = settings.separateTaskWindow;
+
+    setHotkeyInput(hotkeyFailInput, settings.hotkeyFail);
+    setHotkeyInput(hotkeyPassInput, settings.hotkeyPass);
   } catch (error) {
     console.error("[Anker Turbo] Failed to load settings:", error);
 
-    delayInput.value = String(DEFAULT_DELAY);
+    delayInput.value = String(AT.DEFAULTS.delay);
 
-    concurrentInput.value = String(DEFAULT_CONCURRENT);
+    concurrentInput.value = String(AT.DEFAULTS.concurrent);
 
-    blankReloadInput.value = String(DEFAULT_BLANK_RELOAD);
+    blankReloadInput.value = String(AT.DEFAULTS.blankReload);
 
-    maxAutoReloadInput.value = String(DEFAULT_MAX_AUTO_RELOAD);
+    maxAutoReloadInput.value = String(AT.DEFAULTS.maxAutoReload);
 
-    separateTaskWindowInput.checked = DEFAULT_SEPARATE_TASK_WINDOW;
+    separateTaskWindowInput.checked = AT.DEFAULTS.separateTaskWindow;
+
+    setHotkeyInput(hotkeyFailInput, AT.DEFAULTS.hotkeyFail);
+    setHotkeyInput(hotkeyPassInput, AT.DEFAULTS.hotkeyPass);
   }
 }
 
@@ -152,96 +114,32 @@ async function loadSettings() {
 // =========================================================
 
 async function saveSettings() {
-  // -----------------------------------------------------
-  // READ
-  // -----------------------------------------------------
-
-  let delay = Number(delayInput.value);
-
-  let concurrent = Number(concurrentInput.value);
-
-  let blankReload = Number(blankReloadInput.value);
-
-  let maxAutoReload = Number(maxAutoReloadInput.value);
-
-  const separateTaskWindow = separateTaskWindowInput.checked;
-
-  // -----------------------------------------------------
-  // DELAY
-  // -----------------------------------------------------
-
-  if (!Number.isFinite(delay)) {
-    delay = DEFAULT_DELAY;
-  }
-
-  delay = Math.max(MIN_DELAY, Math.min(MAX_DELAY, Math.round(delay)));
-
-  // -----------------------------------------------------
-  // CONCURRENT
-  // -----------------------------------------------------
-
-  if (!Number.isFinite(concurrent)) {
-    concurrent = DEFAULT_CONCURRENT;
-  }
-
-  concurrent = Math.max(
-    MIN_CONCURRENT,
-    Math.min(MAX_CONCURRENT, Math.round(concurrent)),
-  );
-
-  // -----------------------------------------------------
-  // BLANK RELOAD
-  // -----------------------------------------------------
-
-  if (!Number.isFinite(blankReload)) {
-    blankReload = DEFAULT_BLANK_RELOAD;
-  }
-
-  blankReload = Math.max(
-    MIN_BLANK_RELOAD,
-    Math.min(MAX_BLANK_RELOAD, Math.round(blankReload)),
-  );
-
-  // -----------------------------------------------------
-  // MAX AUTO RELOAD
-  // -----------------------------------------------------
-
-  if (!Number.isFinite(maxAutoReload)) {
-    maxAutoReload = DEFAULT_MAX_AUTO_RELOAD;
-  }
-
-  maxAutoReload = Math.max(
-    MIN_MAX_AUTO_RELOAD,
-    Math.min(MAX_MAX_AUTO_RELOAD, Math.round(maxAutoReload)),
-  );
-
-  // -----------------------------------------------------
-  // UPDATE INPUTS
-  // -----------------------------------------------------
-
-  delayInput.value = String(delay);
-
-  concurrentInput.value = String(concurrent);
-
-  blankReloadInput.value = String(blankReload);
-
-  maxAutoReloadInput.value = String(maxAutoReload);
-
-  // -----------------------------------------------------
-  // SAVE
-  // -----------------------------------------------------
-
   try {
+    const settings = AT.settings.normalize({
+      delay: delayInput.value,
+      concurrent: concurrentInput.value,
+      blankReload: blankReloadInput.value,
+      maxAutoReload: maxAutoReloadInput.value,
+      separateTaskWindow: separateTaskWindowInput.checked,
+      hotkeyFail: hotkeyFailInput.dataset.code,
+      hotkeyPass: hotkeyPassInput.dataset.code,
+    });
+
+    delayInput.value = String(settings.delay);
+    concurrentInput.value = String(settings.concurrent);
+    blankReloadInput.value = String(settings.blankReload);
+    maxAutoReloadInput.value = String(settings.maxAutoReload);
+    setHotkeyInput(hotkeyFailInput, settings.hotkeyFail);
+    setHotkeyInput(hotkeyPassInput, settings.hotkeyPass);
+
     await chrome.storage.local.set({
-      turboDelay: delay,
-
-      concurrentTabs: concurrent,
-
-      blankReload: blankReload,
-
-      maxAutoReload: maxAutoReload,
-
-      separateTaskWindow: separateTaskWindow,
+      [AT.STORAGE_KEYS.TURBO_DELAY]: settings.delay,
+      [AT.STORAGE_KEYS.CONCURRENT_TABS]: settings.concurrent,
+      [AT.STORAGE_KEYS.BLANK_RELOAD]: settings.blankReload,
+      [AT.STORAGE_KEYS.MAX_AUTO_RELOAD]: settings.maxAutoReload,
+      [AT.STORAGE_KEYS.SEPARATE_TASK_WINDOW]: settings.separateTaskWindow,
+      [AT.STORAGE_KEYS.HOTKEY_FAIL]: settings.hotkeyFail,
+      [AT.STORAGE_KEYS.HOTKEY_PASS]: settings.hotkeyPass,
     });
 
     status.textContent = "Settings saved";
@@ -254,7 +152,7 @@ async function saveSettings() {
   } catch (error) {
     console.error("[Anker Turbo] Failed to save settings:", error);
 
-    status.textContent = "Save failed";
+    status.textContent = `Save failed: ${error?.message || "unknown error"}`;
 
     status.style.color = "#ff4d4f";
   }
@@ -265,6 +163,9 @@ async function saveSettings() {
 // =========================================================
 
 saveButton.addEventListener("click", saveSettings);
+
+hotkeyFailInput.addEventListener("keydown", captureHotkey);
+hotkeyPassInput.addEventListener("keydown", captureHotkey);
 
 // ENTER → SAVE
 [delayInput, concurrentInput, blankReloadInput, maxAutoReloadInput].forEach(

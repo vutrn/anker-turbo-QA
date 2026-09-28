@@ -1,4 +1,18 @@
+importScripts(
+  "src/shared/namespace.js",
+  "src/shared/constants.js",
+  "src/shared/settings.js",
+  "src/shared/logger.js",
+  "src/background/settings.js",
+  "src/background/tabs.js",
+  "src/background/queue.js",
+  "src/background/lifecycle.js",
+);
+
 "use strict";
+
+const AT = globalThis.AnkerTurbo;
+const getSettings = AT.background.settings.getSettings;
 
 // =========================================================
 // ANKER TURBO BACKGROUND
@@ -25,8 +39,7 @@
 // CONFIG
 // =========================================================
 
-const DEFAULT_DELAY = 600;
-const DEFAULT_CONCURRENT = 3;
+const DEFAULT_DELAY = AT.DEFAULTS.delay;
 
 const STATE_KEY = "ankerTurboRuntimeState";
 
@@ -75,46 +88,15 @@ const taskTabs = new Map();
 
 const recordToTab = new Map();
 
-// =========================================================
-// QUEUE RECONCILIATION
-// =========================================================
-
-function getPendingRecordSet() {
-  return new Set(
-    pendingTasks
-      .filter((task) => task && task.recordId)
-      .map((task) => String(task.recordId)),
-  );
+function reconcileQueueRecords() {
+  pendingTasks = AT.background.queue.reconcileQueueRecords({
+    pendingTasks,
+    recordToTab,
+  });
 }
 
-function reconcileQueueRecords() {
-  const activeIds = new Set(recordToTab.keys());
-  const seen = new Set();
-
-  pendingTasks = pendingTasks.filter((task) => {
-    if (!task || !task.recordId || !task.url) {
-      return false;
-    }
-
-    const recordId = String(task.recordId);
-
-    // Task đang mở thì không được tồn tại trong pending.
-    if (activeIds.has(recordId)) {
-      return false;
-    }
-
-    // Không cho duplicate trong pending pool.
-    if (seen.has(recordId)) {
-      return false;
-    }
-
-    seen.add(recordId);
-
-    task.recordId = recordId;
-    task.url = String(task.url);
-
-    return true;
-  });
+function getPendingRecordSet() {
+  return AT.background.queue.getPendingRecordSet(pendingTasks);
 }
 
 // =========================================================
@@ -128,38 +110,6 @@ let fillingQueue = false;
 // =========================================================
 
 let stateReady = restoreState();
-
-// =========================================================
-// SETTINGS
-// =========================================================
-
-async function getSettings() {
-  const result = await chrome.storage.local.get([
-    "turboDelay",
-    "concurrentTabs",
-    "separateTaskWindow",
-  ]);
-
-  let delay = Number(result.turboDelay);
-
-  let concurrent = Number(result.concurrentTabs);
-
-  if (!Number.isFinite(delay)) {
-    delay = DEFAULT_DELAY;
-  }
-
-  if (!Number.isFinite(concurrent)) {
-    concurrent = DEFAULT_CONCURRENT;
-  }
-
-  return {
-    delay: Math.max(100, delay),
-
-    concurrent: Math.max(1, Math.min(50, Math.round(concurrent))),
-
-    separateTaskWindow: result.separateTaskWindow !== false,
-  };
-}
 
 // =========================================================
 // SLEEP
@@ -476,51 +426,11 @@ function removeTaskMapping(tabId) {
 // =========================================================
 
 function appendPendingTasks(tasks) {
-  if (!Array.isArray(tasks)) {
-    return;
-  }
-
-  reconcileQueueRecords();
-
-  const pendingIds = getPendingRecordSet();
-
-  for (const task of tasks) {
-    if (!task || !task.recordId || !task.url) {
-      continue;
-    }
-
-    const recordId = String(task.recordId);
-
-    // ================================================
-    // 1. TASK ĐANG ACTIVE
-    // ================================================
-
-    if (recordToTab.has(recordId)) {
-      continue;
-    }
-
-    // ================================================
-    // 2. TASK ĐANG PENDING
-    // ================================================
-
-    if (pendingIds.has(recordId)) {
-      continue;
-    }
-
-    // ================================================
-    // 3. ADD VÀO POOL
-    // ================================================
-
-    pendingTasks.push({
-      recordId,
-      url: String(task.url),
-    });
-
-    pendingIds.add(recordId);
-  }
-
-  // Dọn duplicate lần cuối.
-  reconcileQueueRecords();
+  pendingTasks = AT.background.queue.appendPendingTasks({
+    pendingTasks,
+    tasks,
+    recordToTab,
+  });
 }
 
 // =========================================================
@@ -681,157 +591,23 @@ async function bumpCooldown() {
   }
 }
 
-// =========================================================
-// SUBMIT SUCCESS
-// =========================================================
+const lifecycle = AT.background.lifecycle.createLifecycle({
+  getStateReady: () => stateReady,
+  getTaskTabs: () => taskTabs,
+  removeTaskMapping,
+  bumpCooldown,
+  persistState,
+  sleep,
+  notifyController,
+  fillPendingTasks,
+  closeTab: (tabId) => chrome.tabs.remove(tabId),
+});
 
-async function handleTaskSubmitSuccess(tabId) {
-  await stateReady;
-
-  const task = taskTabs.get(tabId);
-
-  if (!task) {
-    return false;
-  }
-
-  if (task.handled || task.submitting) {
-    return false;
-  }
-
-  task.handled = true;
-  task.submitting = true;
-  task.status = "submitted";
-
-  const recordId = String(task.recordId);
-
-  // ---------------------------------------------------------
-  // Remove state BEFORE closing tab
-  // ---------------------------------------------------------
-
-  removeTaskMapping(tabId);
-  await bumpCooldown();
-  await persistState();
-
-  // ---------------------------------------------------------
-  // Close tab
-  // ---------------------------------------------------------
-
-  try {
-    await chrome.tabs.remove(tabId);
-  } catch (_) {
-    // Already closed
-  }
-
-  await sleep(150);
-
-  // ---------------------------------------------------------
-  // Tell Worker which task closed
-  // ---------------------------------------------------------
-
-  await notifyController({
-    type: "CLOSED_TASK",
-    recordId,
-  });
-
-  // ---------------------------------------------------------
-  // Fill pending tasks if any
-  // ---------------------------------------------------------
-
-  await fillPendingTasks();
-  return true;
-}
-
-// =========================================================
-// INVALID TASK PAGE
-// =========================================================
-
-async function handleInvalidTaskPage(tabId) {
-  await stateReady;
-
-  const task = taskTabs.get(tabId);
-
-  if (!task) {
-    return false;
-  }
-
-  if (task) {
-    if (task.handled || task.invalid) {
-      return false;
-    }
-
-    task.handled = true;
-    task.invalid = true;
-    task.status = "invalid";
-
-    const recordId = String(task.recordId);
-
-    removeTaskMapping(tabId);
-    await bumpCooldown();
-    await persistState();
-
-    try {
-      await chrome.tabs.remove(tabId);
-    } catch (_) {}
-
-    await sleep(150);
-
-    await notifyController({
-      type: "CLOSED_TASK",
-      recordId,
-    });
-
-    await fillPendingTasks();
-
-    return true;
-  }
-
-  // ---------------------------------------------------------
-  // FALLBACK:
-  // Tab không có trong taskTabs (SW restart mất mapping,
-  // hoặc tab mở ngoài luồng queue quản lý). Vẫn đóng tab để
-  // tránh tồn đọng warning vĩnh viễn, không chờ đợi vô ích.
-  // ---------------------------------------------------------
-
-  console.warn(
-    "[Anker Turbo] INVALID_TASK_PAGE trên tab không được track:",
-    tabId,
-  );
-
-  try {
-    await chrome.tabs.remove(tabId);
-  } catch (_) {}
-
-  await bumpCooldown();
-
-  await fillPendingTasks();
-
-  return true;
-}
-
-// =========================================================
-// TAB CLOSED
-// =========================================================
-
-async function handleTabClosed(tabId) {
-  await stateReady;
-
-  const task = taskTabs.get(tabId);
-
-  if (!task) {
-    return;
-  }
-
-  removeTaskMapping(tabId);
-  await bumpCooldown();
-  await persistState();
-
-  // ---------------------------------------------------------
-  // Important:
-  //
-  // Manual close itself does not immediately create a new task.
-  // The next FILL_QUEUE from Worker handles it.
-  // ---------------------------------------------------------
-}
+const {
+  handleInvalidTaskPage,
+  handleTabClosed,
+  handleTaskSubmitSuccess,
+} = lifecycle;
 
 // =========================================================
 // TAB REMOVED
@@ -887,6 +663,15 @@ async function reconcileTabs(notify = true) {
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (!message) {
+    return;
+  }
+
+  // =====================================================
+  // NEXT TAB
+  // =====================================================
+
+  if (message.type === AT.MSG.NEXT_TAB) {
+    AT.background.tabs.switchToNextTab(sender.tab);
     return;
   }
 

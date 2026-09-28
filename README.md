@@ -50,7 +50,7 @@ Extension gồm 3 lớp chính:
 - Dừng theo dõi khi đã đạt số lần reload tối đa, hoặc khi tính năng bị tắt (`Max Auto Reload = 0`).
 
 ### 5. Giao diện điều khiển trên trang worker
-- Chèn 3 nút nổi (floating buttons) trên trang worker-job: **START QUEUE**, **STOP**, **RESET**.
+- Chèn 2 nút nổi (floating buttons) trên trang worker-job: **START QUEUE**, **STOP**.
 - Nút START tự đổi trạng thái hiển thị: `START QUEUE` → `RUNNING (n)` → `PAUSED (n)` tuỳ theo queue đang chạy/dừng và số tab đang active.
 - Cập nhật realtime số lượng tab đang chạy dựa trên thông điệp `QUEUE_STATUS` từ background.
 
@@ -78,6 +78,11 @@ Extension gồm 3 lớp chính:
 ├── background.js     # Service Worker: quản lý queue, tab, state persistence
 ├── main.js            # Content script (MAIN world): UI nút bấm, hook fetch/XHR, quét task
 ├── bridge.js          # Content script (ISOLATED world): cầu nối page <-> background
+├── src/shared/        # Namespace, message constants, settings dùng chung
+├── src/background/    # Queue, lifecycle, settings và thao tác tab
+├── src/content/task/  # Autoplay video và hotkey chỉ dành cho trang task
+├── src/content/worker/# Lọc row, dựng URL và UI worker đã tách module
+├── docs/              # Tài liệu kiến trúc và message protocol
 ├── popup.html/css/js  # Giao diện cấu hình (delay, concurrent, blank reload, max reload)
 ```
 
