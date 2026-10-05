@@ -33,7 +33,7 @@
     }
 
     if (Number.isFinite(reloadLimit)) {
-      maxAutoReload = Math.max(0, Math.min(20, Math.round(reloadLimit)));
+      maxAutoReload = Math.max(0, Math.round(reloadLimit));
     }
   }
 

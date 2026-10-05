@@ -13,6 +13,7 @@
     if (typeof value !== "string") return fallback;
 
     const code = value.trim();
+    if (code === "") return "";
     if (/^(Key[A-Z]|Digit[0-9]|F(?:[1-9]|1[0-2])|Arrow(?:Up|Down|Left|Right))$/.test(code)) {
       return code;
     }

@@ -47,6 +47,6 @@
     delay: Object.freeze([100, 10000]),
     concurrent: Object.freeze([1, 50]),
     blankReload: Object.freeze([1000, 60000]),
-    maxAutoReload: Object.freeze([0, 20]),
+    maxAutoReload: Object.freeze([0, Number.MAX_SAFE_INTEGER]),
   });
 })(globalThis.AnkerTurbo);

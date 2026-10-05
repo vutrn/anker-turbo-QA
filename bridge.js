@@ -226,8 +226,8 @@ window.addEventListener("message", (event) => {
             {
               __ankerExtension: true,
               type: HOTKEY_SETTINGS_RESPONSE,
-              hotkeyFail: result.hotkeyFail || "KeyE",
-              hotkeyPass: result.hotkeyPass || "KeyR",
+              hotkeyFail: result.hotkeyFail ?? "KeyE",
+              hotkeyPass: result.hotkeyPass ?? "KeyR",
             },
             "*",
           );

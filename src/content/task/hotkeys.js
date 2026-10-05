@@ -18,8 +18,8 @@
     if (!shortcutHint) return;
 
     shortcutHint.innerHTML =
-      `<span><b style="color:#ff7875">${formatHotkey(hotkeyFailCode)}</b> Fail</span>` +
-      `<span><b style="color:#95de64">${formatHotkey(hotkeyPassCode)}</b> Pass</span>`;
+      `<span><b style="color:#ff7875">${hotkeyFailCode ? formatHotkey(hotkeyFailCode) : "Off"}</b> Fail</span>` +
+      `<span><b style="color:#95de64">${hotkeyPassCode ? formatHotkey(hotkeyPassCode) : "Off"}</b> Pass</span>`;
   }
 
   function isTypingContext(element) {
@@ -89,11 +89,11 @@
 
       hotkeyFailCode = AT.settings.normalizeHotkey(
         event.data.hotkeyFail,
-        "KeyE",
+        "",
       );
       hotkeyPassCode = AT.settings.normalizeHotkey(
         event.data.hotkeyPass,
-        "KeyR",
+        "",
       );
       updateShortcutHint();
     });
@@ -118,8 +118,8 @@
         }
 
         let targetText = null;
-        if (event.code === hotkeyFailCode) targetText = "Fail";
-        else if (event.code === hotkeyPassCode) targetText = "Pass";
+        if (hotkeyFailCode && event.code === hotkeyFailCode) targetText = "Fail";
+        else if (hotkeyPassCode && event.code === hotkeyPassCode) targetText = "Pass";
         if (!targetText) return;
 
         const button = findSubmitButtonByExactText(targetText);

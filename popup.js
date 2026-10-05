@@ -33,13 +33,18 @@ function formatHotkey(code) {
 
 function setHotkeyInput(input, code) {
   input.dataset.code = code;
-  input.value = formatHotkey(code);
+  input.value = code ? formatHotkey(code) : "Off";
 }
 
 function captureHotkey(event) {
   event.preventDefault();
 
   if (event.key === "Control" || event.key === "Alt" || event.key === "Shift" || event.key === "Meta") {
+    return;
+  }
+
+  if (event.key === "Backspace" || event.key === "Delete") {
+    setHotkeyInput(event.currentTarget, "");
     return;
   }
 
