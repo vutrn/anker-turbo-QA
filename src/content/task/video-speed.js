@@ -1,7 +1,6 @@
 (function (AT) {
   "use strict";
 
-  const TARGET_SPEED_LABEL = "X2";
   const CHECK_INTERVAL_MS = 300;
   const rateMap = {
     "X0.1": 0.1,
@@ -11,6 +10,7 @@
     X2: 2,
     X4: 4,
   };
+  const TARGET_SPEED_LABEL = "X2";
 
   function findSpeedInput(root) {
     const labels = root.querySelectorAll(".speed-group label.el-radio-button");
@@ -64,9 +64,6 @@
     function scanVideos() {
       document.querySelectorAll("video.video").forEach((video) => {
         if (processedVideos.has(video)) {
-          if (video.playbackRate !== rateMap[TARGET_SPEED_LABEL]) {
-            video.playbackRate = rateMap[TARGET_SPEED_LABEL];
-          }
           return;
         }
 
