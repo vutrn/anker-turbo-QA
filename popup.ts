@@ -6,23 +6,23 @@ const AT = globalThis.AnkerTurbo;
 // ELEMENTS
 // =========================================================
 
-const delayInput = document.getElementById("delay");
+const delayInput = document.getElementById("delay") as HTMLInputElement;
 
-const concurrentInput = document.getElementById("concurrent");
+const concurrentInput = document.getElementById("concurrent") as HTMLInputElement;
 
-const blankReloadInput = document.getElementById("blankReload");
+const blankReloadInput = document.getElementById("blankReload") as HTMLInputElement;
 
-const maxAutoReloadInput = document.getElementById("maxAutoReload");
+const maxAutoReloadInput = document.getElementById("maxAutoReload") as HTMLInputElement;
 
-const separateTaskWindowInput = document.getElementById("separateTaskWindow");
+const separateTaskWindowInput = document.getElementById("separateTaskWindow") as HTMLInputElement;
 
-const hotkeyFailInput = document.getElementById("hotkeyFail");
+const hotkeyFailInput = document.getElementById("hotkeyFail") as HTMLInputElement;
 
-const hotkeyPassInput = document.getElementById("hotkeyPass");
+const hotkeyPassInput = document.getElementById("hotkeyPass") as HTMLInputElement;
 
-const saveButton = document.getElementById("save");
+const saveButton = document.getElementById("save") as HTMLButtonElement;
 
-const status = document.getElementById("status");
+const status = document.getElementById("status") as HTMLElement;
 
 function formatHotkey(code) {
   return String(code || "")

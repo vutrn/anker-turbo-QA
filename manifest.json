@@ -15,10 +15,10 @@
   ],
   "action": {
     "default_title": "Anker Turbo",
-    "default_popup": "popup.html"
+    "default_popup": "dist/popup.html"
   },
   "background": {
-    "service_worker": "background.js"
+    "service_worker": "dist/background.js"
   },
   "content_scripts": [
     {
@@ -28,20 +28,20 @@
         "https://aidc-annotation-cn.anker-in.com/*"
       ],
       "js": [
-        "src/shared/namespace.js",
-        "src/shared/constants.js",
-        "src/shared/settings.js",
-        "src/shared/logger.js",
-        "content/api-hook.js",
-        "content/annotation-watcher.js",
-        "content/video-preload.js",
-        "src/content/task/video-speed.js",
-        "src/content/task/hotkeys.js",
-        "src/content/task/index.js",
-        "src/content/worker/review-rows.js",
-        "src/content/worker/review-url.js",
-        "src/content/worker/ui.js",
-        "main.js"
+        "dist/src/shared/namespace.js",
+        "dist/src/shared/constants.js",
+        "dist/src/shared/settings.js",
+        "dist/src/shared/logger.js",
+        "dist/content/api-hook.js",
+        "dist/content/annotation-watcher.js",
+        "dist/content/video-preload.js",
+        "dist/src/content/task/video-speed.js",
+        "dist/src/content/task/hotkeys.js",
+        "dist/src/content/task/index.js",
+        "dist/src/content/worker/review-rows.js",
+        "dist/src/content/worker/review-url.js",
+        "dist/src/content/worker/ui.js",
+        "dist/main.js"
       ],
       "run_at": "document_start",
       "world": "MAIN"
@@ -53,10 +53,10 @@
         "https://aidc-annotation-cn.anker-in.com/*"
       ],
       "js": [
-        "src/shared/namespace.js",
-        "src/shared/constants.js",
-        "src/shared/settings.js",
-        "bridge.js"
+        "dist/src/shared/namespace.js",
+        "dist/src/shared/constants.js",
+        "dist/src/shared/settings.js",
+        "dist/bridge.js"
       ],
       "run_at": "document_start",
       "world": "ISOLATED"

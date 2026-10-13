@@ -12,7 +12,7 @@ importScripts(
 "use strict";
 
 const AT = globalThis.AnkerTurbo;
-const getSettings = AT.background.settings.getSettings;
+const getSettings: () => Promise<any> = AT.background.settings.getSettings;
 
 // =========================================================
 // ANKER TURBO BACKGROUND
@@ -987,7 +987,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 // NOTIFY WORKER
 // =========================================================
 
-async function notifyController(extra = {}) {
+async function notifyController(extra: any = {}) {
   await stateReady;
 
   if (controllerTabId === null) {

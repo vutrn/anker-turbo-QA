@@ -24,8 +24,8 @@ Manifest V3 for accelerating batch task reviews on Anker Annotation
 - `manifest.json` declares the MV3 extension, permissions, target Anker
   Annotation domains, Service Worker, and content scripts.
 
-The extension is intentionally implemented without a build step: edit the
-JavaScript, HTML, CSS, and manifest files directly.
+The extension source is TypeScript and is compiled with `npm run build` into
+`dist/`. Edit the TypeScript, HTML, CSS, and manifest source files directly.
 
 ## Testing
 

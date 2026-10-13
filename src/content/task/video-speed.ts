@@ -12,42 +12,10 @@
   };
   const TARGET_SPEED_LABEL = "X2";
 
-  function findSpeedInput(root) {
-    const labels = root.querySelectorAll(".speed-group label.el-radio-button");
-
-    for (const label of labels) {
-      const span = label.querySelector(".el-radio-button__inner");
-
-      if (span && span.textContent.trim() === TARGET_SPEED_LABEL) {
-        return label.querySelector("input.el-radio-button__orig-radio");
-      }
-    }
-
-    return null;
-  }
-
-  function clickSpeedButton(video) {
-    const container = video.closest(".el-col") || document;
-    const input = findSpeedInput(container);
-
-    if (!input) return false;
-
-    const label = input.closest("label.el-radio-button");
-    if (label && label.classList.contains("is-active")) return true;
-
-    input.checked = true;
-    input.dispatchEvent(new Event("change", { bubbles: true }));
-    input.dispatchEvent(new Event("click", { bubbles: true }));
-    if (label) label.click();
-
-    return true;
-  }
-
   function tryPlayAndSetSpeed(video) {
     if (!video) return;
 
     video.playbackRate = rateMap[TARGET_SPEED_LABEL];
-    clickSpeedButton(video);
     video.muted = true;
 
     const playPromise = video.play();
@@ -62,7 +30,9 @@
     const processedVideos = new WeakSet();
 
     function scanVideos() {
-      document.querySelectorAll("video.video").forEach((video) => {
+      document
+        .querySelectorAll<HTMLVideoElement>("video.video")
+        .forEach((video) => {
         if (processedVideos.has(video)) {
           return;
         }
@@ -78,7 +48,7 @@
             { once: true },
           );
         }
-      });
+        });
     }
 
     setInterval(scanVideos, CHECK_INTERVAL_MS);

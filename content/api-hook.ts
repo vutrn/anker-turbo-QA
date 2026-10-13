@@ -146,7 +146,12 @@
       const response = await originalFetch.apply(this, args);
 
       try {
-        const requestUrl = typeof args[0] === "string" ? args[0] : args[0]?.url;
+        const requestUrl =
+          typeof args[0] === "string"
+            ? args[0]
+            : args[0] instanceof Request
+              ? args[0].url
+              : String(args[0]);
         const requestMethod =
           args[0] instanceof Request ? args[0].method : args[1]?.method || "GET";
         const clone = response.clone();
@@ -196,7 +201,7 @@
     };
   }
 
-  function start(options = {}) {
+  function start(options: any = {}) {
     detectedConfig = options.detectedConfig || {};
     isWorkerJobPage = options.isWorkerJobPage || isWorkerJobPage;
     getCurrentRecordId = options.getCurrentRecordId || getCurrentRecordId;

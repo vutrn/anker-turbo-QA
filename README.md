@@ -14,6 +14,11 @@ Chrome Extension (Manifest V3) hỗ trợ tự động hoá quy trình review ta
 
 ## Tổng quan
 
+Mã nguồn được viết bằng TypeScript. Chạy `npm install`, sau đó `npm run
+typecheck` và `npm run build` để tạo các file JavaScript trong thư mục
+`dist/`. Manifest ở thư mục gốc đã trỏ tới các file build này; có thể load
+thư mục gốc như một unpacked extension.
+
 Extension gồm 3 lớp chính:
 - **main.js** — chạy trong `MAIN world` của trang, đọc UI/API của web app, gắn nút điều khiển, phát hiện task lỗi/task trắng.
 - **bridge.js** — chạy trong `ISOLATED world`, làm cầu nối giữa trang web (`window.postMessage`) và Service Worker (`chrome.runtime.sendMessage`).
@@ -75,15 +80,15 @@ Extension gồm 3 lớp chính:
 
 ```
 ├── manifest.json     # Khai báo Manifest V3, permissions, content scripts
-├── background.js     # Service Worker: quản lý queue, tab, state persistence
-├── main.js            # Content script (MAIN world): UI nút bấm, hook fetch/XHR, quét task
-├── bridge.js          # Content script (ISOLATED world): cầu nối page <-> background
+├── background.ts     # Service Worker source (compiled to dist/background.js)
+├── main.ts           # MAIN-world content script source
+├── bridge.ts         # ISOLATED-world bridge source
 ├── src/shared/        # Namespace, message constants, settings dùng chung
 ├── src/background/    # Queue, lifecycle, settings và thao tác tab
 ├── src/content/task/  # Autoplay video và hotkey chỉ dành cho trang task
 ├── src/content/worker/# Lọc row, dựng URL và UI worker đã tách module
 ├── docs/              # Tài liệu kiến trúc và message protocol
-├── popup.html/css/js  # Giao diện cấu hình (delay, concurrent, blank reload, max reload)
+├── popup.html/css/ts  # Giao diện cấu hình (compiled to dist/)
 ```
 
 **Domain được áp dụng:**

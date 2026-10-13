@@ -37,7 +37,7 @@
   }
 
   function findSubmitButtonByExactText(text) {
-    const buttons = document.querySelectorAll(
+    const buttons = document.querySelectorAll<HTMLButtonElement>(
       'button[form="task-form"][type="submit"]',
     );
     const wanted = text.trim().toLowerCase();

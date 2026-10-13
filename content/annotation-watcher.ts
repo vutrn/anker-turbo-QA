@@ -18,8 +18,8 @@
   let annotationWatcher = null;
   let annotationBlankSince = null;
   let invalidTaskReported = false;
-  let isWorkerJobPage = () => false;
-  let important = () => {};
+  let isWorkerJobPage: () => boolean = () => false;
+  let important: (...args: any[]) => void = () => {};
 
   function setSettings(blankReload, maxReload) {
     const blankTimeout = Number(blankReload);
@@ -157,7 +157,7 @@
     }, CHECK_INTERVAL);
   }
 
-  function start(options = {}) {
+  function start(options: any = {}) {
     isWorkerJobPage = options.isWorkerJobPage || isWorkerJobPage;
     important = options.important || important;
     invalidTaskReported = false;

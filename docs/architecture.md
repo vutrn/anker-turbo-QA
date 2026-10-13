@@ -18,18 +18,23 @@ Background Service Worker
 
 ## Script loading
 
-The extension intentionally uses classic scripts and an explicit load order. This
-keeps the MAIN-world content scripts compatible with Manifest V3 without a
-build step.
+The extension uses classic scripts and an explicit load order. TypeScript
+sources are compiled independently with esbuild into `dist/`; this preserves
+the MAIN-world content scripts' compatibility with Manifest V3 while keeping
+the existing runtime boundaries.
 
 - `src/shared/`: namespace, constants, settings, and logging shared by contexts.
 - `src/content/task/`: behavior used only by `qa-task-start` pages.
 - `src/content/worker/`: row filtering, review URL creation, and worker UI modules.
-- `main.js`: current worker-page controller entry; queue coordination remains here during the incremental migration.
-- `bridge.js`: isolated relay between page messages and the Service Worker.
+- `main.ts`: current worker-page controller entry; compiled to `dist/main.js`.
+- `bridge.ts`: isolated relay between page messages and the Service Worker.
 - `src/background/`: queue helpers, lifecycle handlers, settings, and tab modules used by the Service Worker.
-- `background.js`: current Service Worker entry and queue coordinator; persistence wiring remains here during the incremental migration.
-- `popup.js`: settings UI, using shared normalization.
+- `background.ts`: current Service Worker entry and queue coordinator; compiled to `dist/background.js`.
+- `popup.ts`: settings UI, using shared normalization; compiled to `dist/popup.js`.
+
+The source files use the `.ts` extension. `npm run build` emits the
+corresponding `.js` files under `dist/`; `manifest.json` loads only those
+compiled files.
 
 ## Migration rule
 

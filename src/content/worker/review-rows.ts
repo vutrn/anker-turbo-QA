@@ -3,7 +3,9 @@
 
   function getReviewRows() {
     return [
-      ...document.querySelectorAll("tbody.ant-table-tbody tr.ant-table-row"),
+      ...document.querySelectorAll<HTMLTableRowElement>(
+        "tbody.ant-table-tbody tr.ant-table-row",
+      ),
     ].filter((row) => {
       if (row.getAttribute("aria-hidden") === "true") return false;
 
@@ -25,7 +27,9 @@
         dataStatus === "assigned for collection";
       if (!canReview) return false;
 
-      const reviewButton = cells[4].querySelector("button.ant-btn-link");
+      const reviewButton = cells[4].querySelector<HTMLButtonElement>(
+        "button.ant-btn-link",
+      );
       if (!reviewButton) return false;
       if (reviewButton.textContent.trim().toLowerCase() !== "review") {
         return false;
@@ -37,7 +41,9 @@
 
   function getVisibleRowStatusMap() {
     const rows = [
-      ...document.querySelectorAll("tbody.ant-table-tbody tr.ant-table-row"),
+      ...document.querySelectorAll<HTMLTableRowElement>(
+        "tbody.ant-table-tbody tr.ant-table-row",
+      ),
     ];
     const map = new Map();
 
