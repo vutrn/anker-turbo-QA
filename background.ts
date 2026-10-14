@@ -14,6 +14,29 @@ importScripts(
 const AT = globalThis.AnkerTurbo;
 const getSettings: () => Promise<any> = AT.background.settings.getSettings;
 
+interface RuntimeStateTask {
+  tabId: number;
+  recordId: string;
+  url?: string;
+  status?: string;
+  createdAt?: number;
+  submitting?: boolean;
+  invalid?: boolean;
+  handled?: boolean;
+}
+
+interface RuntimeState {
+  queueEnabled?: boolean;
+  controllerTabId?: number | null;
+  taskWindowId?: number | null;
+  nextTaskOpenAllowedAt?: number;
+  pendingTasks?: Array<{
+    recordId: string;
+    url: string;
+  }>;
+  activeTasks?: RuntimeStateTask[];
+}
+
 // =========================================================
 // ANKER TURBO BACKGROUND
 // PERSISTENT / SELF-HEAL VERSION
@@ -127,7 +150,7 @@ async function restoreState() {
   try {
     const result = await chrome.storage.session.get(STATE_KEY);
 
-    const saved = result?.[STATE_KEY];
+    const saved = result?.[STATE_KEY] as RuntimeState | undefined;
 
     if (!saved || typeof saved !== "object") {
       return;

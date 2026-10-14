@@ -26,14 +26,12 @@
     if (!element) return false;
 
     const tag = element.tagName;
-    if (tag === "TEXTAREA") return true;
-
-    if (tag === "INPUT") {
-      const type = (element.getAttribute("type") || "").toLowerCase();
-      return !["radio", "checkbox", "button", "submit"].includes(type);
-    }
-
-    return element.isContentEditable;
+    return (
+      tag === "INPUT" ||
+      tag === "TEXTAREA" ||
+      element.isContentEditable ||
+      element.closest?.('[contenteditable="true"]')
+    );
   }
 
   function findSubmitButtonByExactText(text) {
@@ -103,43 +101,66 @@
       "*",
     );
 
-    document.addEventListener(
-      "keydown",
-      (event) => {
-        if (
-          event.ctrlKey ||
-          event.metaKey ||
-          event.altKey ||
-          event.shiftKey ||
-          event.repeat ||
-          isTypingContext(document.activeElement)
-        ) {
-          return;
-        }
+    const handleKeydown = (event) => {
+      if (
+        event.ctrlKey ||
+        event.metaKey ||
+        event.altKey ||
+        event.shiftKey ||
+        event.repeat ||
+        isTypingContext(event.target)
+      ) {
+        return;
+      }
 
-        let targetText = null;
-        if (hotkeyFailCode && event.code === hotkeyFailCode) targetText = "Fail";
-        else if (hotkeyPassCode && event.code === hotkeyPassCode) targetText = "Pass";
-        if (!targetText) return;
+      let targetText = null;
+      if (hotkeyFailCode && event.code === hotkeyFailCode) targetText = "Fail";
+      else if (hotkeyPassCode && event.code === hotkeyPassCode) targetText = "Pass";
+      if (!targetText) return;
 
-        const button = findSubmitButtonByExactText(targetText);
-        if (!button || button.disabled) return;
+      const button = findSubmitButtonByExactText(targetText);
+      if (!button || button.disabled) return;
 
-        event.preventDefault();
-        event.stopPropagation();
-        button.click();
+      event.preventDefault();
+      event.stopPropagation();
+      button.click();
 
-        if (SWITCH_TO_NEXT_TAB_AFTER_QA) {
-          setTimeout(() => {
-            window.postMessage(
-              { __ankerExtension: true, type: AT.MSG.NEXT_TAB },
-              "*",
-            );
-          }, NEXT_TAB_DELAY_MS);
-        }
-      },
-      true,
-    );
+      if (SWITCH_TO_NEXT_TAB_AFTER_QA) {
+        setTimeout(() => {
+          window.postMessage(
+            { __ankerExtension: true, type: AT.MSG.NEXT_TAB },
+            "*",
+          );
+        }, NEXT_TAB_DELAY_MS);
+      }
+    };
+
+    const attachedDocuments = new WeakSet();
+    const attachedIframes = new WeakSet();
+    const attachDocument = (targetDocument) => {
+      if (attachedDocuments.has(targetDocument)) return;
+      attachedDocuments.add(targetDocument);
+      targetDocument.addEventListener("keydown", handleKeydown, true);
+    };
+
+    const attachIframes = () => {
+      for (const iframe of document.querySelectorAll("iframe")) {
+        const frameDocument = iframe.contentDocument;
+        if (frameDocument) attachDocument(frameDocument);
+        if (attachedIframes.has(iframe)) continue;
+        attachedIframes.add(iframe);
+        iframe.addEventListener("load", () => {
+          if (iframe.contentDocument) attachDocument(iframe.contentDocument);
+        });
+      }
+    };
+
+    attachDocument(document);
+    attachIframes();
+    new MutationObserver(attachIframes).observe(document.documentElement, {
+      childList: true,
+      subtree: true,
+    });
   }
 
   AT.task = AT.task || {};
