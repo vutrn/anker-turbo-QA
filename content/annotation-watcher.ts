@@ -120,6 +120,10 @@
     } catch (_) {}
 
     important("RELOAD BLANK TASK", `${count + 1}/${maxAutoReload}`);
+    window.__ankerTurboTaskTitle?.set(
+      "reload",
+      `${count + 1}/${maxAutoReload}`,
+    );
     stopAnnotationWatcher();
     location.reload();
   }

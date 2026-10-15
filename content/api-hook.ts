@@ -139,6 +139,12 @@
     );
   }
 
+  function markSubmitStarted() {
+    if (!isWorkerJobPage()) {
+      window.__ankerTurboTaskTitle?.set("submitting");
+    }
+  }
+
   function installFetchHook() {
     const originalFetch = window.fetch;
 
@@ -164,6 +170,8 @@
         }
 
         if (isSubmitApi(requestUrl, requestMethod)) {
+          markSubmitStarted();
+
           if (response.status >= 200 && response.status < 300) {
             reportSubmitSuccess(requestUrl);
           }
@@ -190,6 +198,8 @@
           processApiData(this.responseText);
 
           if (isSubmitApi(this.__ankerUrl, this.__ankerMethod)) {
+            markSubmitStarted();
+
             if (this.status >= 200 && this.status < 300) {
               reportSubmitSuccess(this.__ankerUrl);
             }

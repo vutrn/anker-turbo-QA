@@ -46,6 +46,18 @@
     if (window.__ankerTurboAnnotationWatcher) {
       window.__ankerTurboAnnotationWatcher.setSettings(blankReload, maxReload);
     }
+
+    if (isTaskPage()) {
+      try {
+        const reloadCount = Number(
+          sessionStorage.getItem("anker_annotation_reload_count"),
+        );
+
+        if (reloadCount > 0 && Number(maxReload) > 0) {
+          setTaskTitle("reload", `${reloadCount}/${Math.round(Number(maxReload))}`);
+        }
+      } catch (_) {}
+    }
   }
 
   // =========================================================
@@ -85,8 +97,6 @@
     return location.pathname === "/ssr/qa-task-start";
   }
 
-  AT.task?.start();
-
   // =========================================================
   // GET CURRENT RECORD ID
   // =========================================================
@@ -100,6 +110,42 @@
       return null;
     }
   }
+
+  // =========================================================
+  // TASK TAB TITLE
+  // =========================================================
+
+  function setTaskTitle(status, detail = "...") {
+    const labels = {
+      loading: "⏳ [Loading]",
+      ready: "🟢 [Ready]",
+      reload: "🔄 [Reload",
+      submitting: "🚀 [Submitting]",
+    };
+
+    if (status === "ready") {
+      const recordId = getCurrentRecordId();
+      document.title = `${labels.ready} ${recordId ? `#${recordId}` : detail}`;
+      return;
+    }
+
+    if (status === "reload") {
+      document.title = `${labels.reload} ${detail}] ...`;
+      return;
+    }
+
+    document.title = `${labels[status] || labels.loading} ${detail}`;
+  }
+
+  window.__ankerTurboTaskTitle = {
+    set: setTaskTitle,
+  };
+
+  if (isTaskPage()) {
+    setTaskTitle("loading");
+  }
+
+  AT.task?.start();
 
   window.__ankerTurboApiHook?.start({
     detectedConfig,

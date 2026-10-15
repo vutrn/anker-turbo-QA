@@ -7,6 +7,9 @@ interface typeofGlobalThis {
 
 interface Window {
   [key: string]: any;
+  __ankerTurboTaskTitle?: {
+    set(status: string, detail?: string): void;
+  };
 }
 
 interface XMLHttpRequest {

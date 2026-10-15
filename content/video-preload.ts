@@ -58,6 +58,8 @@
         `${(buffer.byteLength / 1024 / 1024).toFixed(2)} MB`,
       );
 
+      window.__ankerTurboTaskTitle?.set("ready");
+
       if (document.contains(video) && video.paused && video.currentTime === 0) {
         video.load();
         console.log(
