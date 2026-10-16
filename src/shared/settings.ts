@@ -14,7 +14,7 @@
 
     const code = value.trim();
     if (code === "") return "";
-    if (/^(Key[A-Z]|Digit[0-9]|F(?:[1-9]|1[0-2])|Arrow(?:Up|Down|Left|Right))$/.test(code)) {
+    if (/^(Key[A-Z]|Digit[0-9]|F(?:[1-9]|1[0-2])|Arrow(?:Up|Down|Left|Right)|Backquote|Space|Enter|Tab|Escape)$/.test(code)) {
       return code;
     }
 
@@ -49,6 +49,14 @@
         source.separateTaskWindow === undefined
           ? AT.DEFAULTS.separateTaskWindow
           : Boolean(source.separateTaskWindow),
+      counterEnabled:
+        source.counterEnabled === undefined
+          ? AT.DEFAULTS.counterEnabled
+          : Boolean(source.counterEnabled),
+      antiIdleEnabled:
+        source.antiIdleEnabled === undefined
+          ? AT.DEFAULTS.antiIdleEnabled
+          : Boolean(source.antiIdleEnabled),
       hotkeyFail: normalizeHotkey(
         source.hotkeyFail,
         AT.DEFAULTS.hotkeyFail,
@@ -56,6 +64,10 @@
       hotkeyPass: normalizeHotkey(
         source.hotkeyPass,
         AT.DEFAULTS.hotkeyPass,
+      ),
+      hotkeySubmit: normalizeHotkey(
+        source.hotkeySubmit,
+        AT.DEFAULTS.hotkeySubmit,
       ),
     };
   }

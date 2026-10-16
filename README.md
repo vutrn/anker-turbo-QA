@@ -60,11 +60,16 @@ Extension gồm 3 lớp chính:
 - Cập nhật realtime số lượng tab đang chạy dựa trên thông điệp `QUEUE_STATUS` từ background.
 
 ### 6. Popup cấu hình (popup.html/js/css)
-- Cho phép người dùng chỉnh và lưu 4 thông số:
+- Popup được chia thành hai tab:
+  - **General**: delay, số tab chạy song song, cửa sổ task riêng và blank-task recovery.
+  - **Task Helpers**: counter widget, anti-idle và các phím tắt thao tác task.
+- Cho phép người dùng chỉnh và lưu các thông số:
   - **Delay** (ms giữa các lần mở task, 100–10000)
   - **Concurrent Tabs** (số task chạy song song, 1–50)
   - **Blank Reload** (thời gian chờ trước khi reload task trắng, 1000–60000ms)
   - **Max Auto Reload** (số lần reload tối đa cho một task trắng, 0–20)
+- Có thể gán lại phím **Submit**; phím mặc định là `Backquote`.
+- Phím Fail, Pass và Submit không được trùng nhau.
 - Tự động chuẩn hoá (clamp) giá trị nhập vào trong giới hạn cho phép.
 - Lưu vào `chrome.storage.local`, hiển thị thông báo lưu thành công/thất bại.
 - Hỗ trợ lưu nhanh bằng phím **Enter**.

@@ -29,8 +29,11 @@
     BLANK_RELOAD: "blankReload",
     MAX_AUTO_RELOAD: "maxAutoReload",
     SEPARATE_TASK_WINDOW: "separateTaskWindow",
+    COUNTER_ENABLED: "counterEnabled",
+    ANTI_IDLE_ENABLED: "antiIdleEnabled",
     HOTKEY_FAIL: "hotkeyFail",
     HOTKEY_PASS: "hotkeyPass",
+    HOTKEY_SUBMIT: "hotkeySubmit",
   });
 
   AT.DEFAULTS = Object.freeze({
@@ -39,8 +42,11 @@
     blankReload: 8000,
     maxAutoReload: 3,
     separateTaskWindow: true,
+    counterEnabled: true,
+    antiIdleEnabled: true,
     hotkeyFail: "KeyE",
     hotkeyPass: "KeyR",
+    hotkeySubmit: "Backquote",
   });
 
   AT.LIMITS = Object.freeze({

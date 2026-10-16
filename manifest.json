@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Anker Turbo Background Review",
-  "version": "2.1.0",
+  "version": "2.2.1",
   "description": "Anker Turbo Background Review with concurrent task queue.",
   "permissions": [
     "tabs",
@@ -37,6 +37,9 @@
         "dist/content/video-preload.js",
         "dist/src/content/task/video-speed.js",
         "dist/src/content/task/hotkeys.js",
+        "dist/src/content/task/counter.js",
+        "dist/src/content/task/anti-idle.js",
+        "dist/src/content/task/submit-shortcut.js",
         "dist/src/content/task/index.js",
         "dist/src/content/worker/review-rows.js",
         "dist/src/content/worker/review-url.js",

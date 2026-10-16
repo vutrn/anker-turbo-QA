@@ -9,6 +9,8 @@
   let isWorkerJobPage = () => false;
   let getCurrentRecordId = () => null;
   let submitSuccessReported = false;
+  let __ankerLastCountedAt = 0;
+  const __ankerCountDedupeWindow = 1500;
 
   function scanObject(obj, depth = 0) {
     if (depth > 30 || !obj || typeof obj !== "object") {
@@ -113,9 +115,61 @@
     }
   }
 
+  function isReworkTask(url) {
+    if (!url) {
+      return false;
+    }
+
+    try {
+      const absoluteUrl = new URL(String(url), location.origin);
+      const params = absoluteUrl.searchParams;
+
+      for (const key of ["taskType", "jobType", "type", "reworkFlag", "isRework", "category"]) {
+        const value = params.get(key);
+
+        if (value && /rework/i.test(value)) {
+          return true;
+        }
+      }
+    } catch (_) {
+      if (/rework/i.test(String(url))) {
+        return true;
+      }
+    }
+
+    try {
+      const doc = (window.top && window.top.document) || document;
+      const bodyText = doc.body ? doc.body.innerText : "";
+
+      if (/\brework\b/i.test(bodyText)) {
+        return true;
+      }
+    } catch (_) {}
+
+    return false;
+  }
+
   function reportSubmitSuccess(url) {
     if (isWorkerJobPage() || submitSuccessReported) {
       return;
+    }
+
+    if (isReworkTask(url)) {
+      console.log("[Anker Turbo] Skip submit counter for rework task.");
+      return;
+    }
+
+    const now = Date.now();
+
+    if (now - __ankerLastCountedAt < __ankerCountDedupeWindow) {
+      return;
+    }
+
+    __ankerLastCountedAt = now;
+
+    if (window.top && typeof window.top.incrementAnkerCounter === "function") {
+      window.top.incrementAnkerCounter();
+      console.log("[Anker Turbo] +1 submit counter (API success, non-rework). ");
     }
 
     submitSuccessReported = true;
