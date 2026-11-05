@@ -3,6 +3,8 @@
 
   const COUNTER_KEY_PREFIX = "anker_submit_count_";
   const POSITION_KEY_PREFIX = "anker_counter_widget_position_";
+  let activeWidget = null;
+  let enabled = false;
 
   function getCountKey() {
     return `${COUNTER_KEY_PREFIX}${new Date().toISOString().slice(0, 10)}`;
@@ -18,14 +20,29 @@
   }
 
   function createCounterWidget() {
+    if (!enabled) {
+      return;
+    }
+
     if (window.top !== window.self) {
       return;
     }
 
-    const rootDocument = window.top?.document || document;
-    const rootWindow = window.top || window;
+    const rootWindow = window;
+    const rootDocument = document;
 
-    if (!rootDocument.body || rootDocument.getElementById("anker-counter-widget")) {
+    // The task feature state is read asynchronously, so start() can run before
+    // the document has a body (content scripts run at document_start).
+    if (!rootDocument.body) {
+      if (rootDocument.readyState === "loading") {
+        rootDocument.addEventListener("DOMContentLoaded", createCounterWidget, { once: true });
+      } else {
+        setTimeout(createCounterWidget, 0);
+      }
+      return;
+    }
+
+    if (rootDocument.getElementById("anker-counter-widget")) {
       return;
     }
 
@@ -229,6 +246,7 @@
     });
 
     rootDocument.body.appendChild(widget);
+    activeWidget = widget;
     updateWidgetDisplay();
   }
 
@@ -237,9 +255,16 @@
       return;
     }
 
+    enabled = true;
     createCounterWidget();
   }
 
+  function stop() {
+    enabled = false;
+    activeWidget?.remove();
+    activeWidget = null;
+  }
+
   AT.task = AT.task || {};
-  AT.task.counter = { start };
+  AT.task.counter = { start, stop };
 })(globalThis.AnkerTurbo);

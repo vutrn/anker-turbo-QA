@@ -181,6 +181,23 @@ input:focus {
   font-size: 11px;
 }
 
+.inline-option {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+  color: #7b8798;
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.inline-option input {
+  width: 13px;
+  height: 13px;
+  margin: 0;
+  accent-color: #1677ff;
+}
+
 .divider {
   height: 1px;
   margin: 18px 0 14px;

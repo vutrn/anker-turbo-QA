@@ -18,8 +18,8 @@
     if (!shortcutHint) return;
 
     shortcutHint.innerHTML =
-      `<span><b style="color:#ff7875">${hotkeyFailCode ? formatHotkey(hotkeyFailCode) : "Off"}</b> Fail</span>` +
-      `<span><b style="color:#95de64">${hotkeyPassCode ? formatHotkey(hotkeyPassCode) : "Off"}</b> Pass</span>`;
+      `<span><b style="color:#ff7875">${hotkeyFailCode ? "[" + formatHotkey(hotkeyFailCode) + "]" : "[ ]"}</b> Fail</span>` +
+      `<span><b style="color:#95de64">${hotkeyPassCode ? "[" + formatHotkey(hotkeyPassCode) + "]" : "[ ]"}</b> Pass</span>`;
   }
 
   function isTypingContext(element) {
@@ -81,16 +81,20 @@
     createShortcutHint();
 
     window.addEventListener("message", (event) => {
-      if (event.source !== window || event.data?.type !== "HOTKEY_SETTINGS_RESPONSE") {
+      if (
+        event.source !== window ||
+        (event.data?.type !== "HOTKEY_SETTINGS_RESPONSE" &&
+          event.data?.type !== "SETTINGS_CHANGED")
+      ) {
         return;
       }
 
       hotkeyFailCode = AT.settings.normalizeHotkey(
-        event.data.hotkeyFail,
+        event.data.hotkeyFail ?? event.data.settings?.hotkeyFail,
         "",
       );
       hotkeyPassCode = AT.settings.normalizeHotkey(
-        event.data.hotkeyPass,
+        event.data.hotkeyPass ?? event.data.settings?.hotkeyPass,
         "",
       );
       updateShortcutHint();

@@ -11,7 +11,7 @@
       detectedConfig.businessType || worker.businessType || "WORK";
     const locale = detectedConfig.locale || "en-US";
     const flowId = detectedConfig.flowId;
-    const title = detectedConfig.title;
+    const title = detectedConfig.title || document.title.trim();
 
     if (!jobId || !projectId || !flowId || !title || !recordId) {
       return null;

@@ -53,6 +53,10 @@
         source.counterEnabled === undefined
           ? AT.DEFAULTS.counterEnabled
           : Boolean(source.counterEnabled),
+      counterIncludeRework:
+        source.counterIncludeRework === undefined
+          ? AT.DEFAULTS.counterIncludeRework
+          : Boolean(source.counterIncludeRework),
       antiIdleEnabled:
         source.antiIdleEnabled === undefined
           ? AT.DEFAULTS.antiIdleEnabled

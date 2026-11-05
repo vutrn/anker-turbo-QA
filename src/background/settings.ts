@@ -8,6 +8,7 @@
       keys.CONCURRENT_TABS,
       keys.SEPARATE_TASK_WINDOW,
       keys.COUNTER_ENABLED,
+      keys.COUNTER_INCLUDE_REWORK,
       keys.ANTI_IDLE_ENABLED,
     ]);
 
@@ -16,6 +17,7 @@
       concurrent: result[keys.CONCURRENT_TABS],
       separateTaskWindow: result[keys.SEPARATE_TASK_WINDOW],
       counterEnabled: result[keys.COUNTER_ENABLED],
+      counterIncludeRework: result[keys.COUNTER_INCLUDE_REWORK],
       antiIdleEnabled: result[keys.ANTI_IDLE_ENABLED],
     });
 

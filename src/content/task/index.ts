@@ -1,8 +1,16 @@
 (function (AT) {
   "use strict";
 
+  function getTaskPathname() {
+    return location.pathname.replace(/\/+$/, "");
+  }
+
   function isTaskPage() {
-    return location.pathname === "/ssr/qa-task-start";
+    return getTaskPathname() === "/ssr/qa-task-start";
+  }
+
+  function isAssignedTaskPage() {
+    return getTaskPathname() === "/ssr/annotation-task-start";
   }
 
   async function loadTaskFeatureState(key, fallback = true) {
@@ -16,44 +24,61 @@
   }
 
   async function start() {
-    if (!isTaskPage()) return;
+    if (!isTaskPage() && !isAssignedTaskPage()) return;
 
-    AT.task.videoSpeed.start();
-    AT.task.hotkeys.start();
-
-    const counterEnabled = await loadTaskFeatureState(
-      globalThis.AnkerTurbo?.STORAGE_KEYS?.COUNTER_ENABLED ?? "counterEnabled",
-      true,
-    );
+    console.log("[Anker Turbo] Task helpers initializing:", location.pathname);
 
     const antiIdleEnabled = await loadTaskFeatureState(
       globalThis.AnkerTurbo?.STORAGE_KEYS?.ANTI_IDLE_ENABLED ?? "antiIdleEnabled",
       true,
     );
+    const counterEnabled = await loadTaskFeatureState(
+      globalThis.AnkerTurbo?.STORAGE_KEYS?.COUNTER_ENABLED ?? "counterEnabled",
+      true,
+    );
 
-    let submitShortcutCode = globalThis.AnkerTurbo?.DEFAULTS?.hotkeySubmit ?? "Backquote";
+    applyFeatureSettings({ antiIdleEnabled, counterEnabled });
 
-    try {
-      const result = await chrome.storage.local.get(
-        globalThis.AnkerTurbo?.STORAGE_KEYS?.HOTKEY_SUBMIT ?? "hotkeySubmit",
-      );
-      if (result[globalThis.AnkerTurbo?.STORAGE_KEYS?.HOTKEY_SUBMIT ?? "hotkeySubmit"] !== undefined) {
-        submitShortcutCode = String(
-          result[globalThis.AnkerTurbo?.STORAGE_KEYS?.HOTKEY_SUBMIT ?? "hotkeySubmit"],
-        );
-      }
-    } catch (_) {}
+    AT.task.submitShortcut.start(
+      globalThis.AnkerTurbo?.DEFAULTS?.hotkeySubmit ?? "Backquote",
+    );
 
-    if (counterEnabled) {
-      AT.task.counter.start();
+    if (isAssignedTaskPage()) {
+      return;
     }
 
-    if (antiIdleEnabled) {
-      AT.task.antiIdle.start();
-    }
-
-    AT.task.submitShortcut.start(submitShortcutCode);
+    AT.task.videoSpeed.start();
+    AT.task.hotkeys.start();
   }
+
+  function applyFeatureSettings(settings) {
+    if (settings.antiIdleEnabled) {
+      AT.task.antiIdle.start();
+    } else {
+      AT.task.antiIdle.stop();
+    }
+
+    if (settings.counterEnabled) {
+      AT.task.counter.start();
+    } else {
+      AT.task.counter.stop();
+    }
+  }
+
+  window.addEventListener("message", (event) => {
+    if (
+      event.source !== window ||
+      event.data?.type !== "SETTINGS_CHANGED" ||
+      (!isTaskPage() && !isAssignedTaskPage())
+    ) {
+      return;
+    }
+
+    const settings = event.data.settings;
+    if (!settings) return;
+
+    applyFeatureSettings(settings);
+  });
 
   AT.task = AT.task || {};
   AT.task.start = start;

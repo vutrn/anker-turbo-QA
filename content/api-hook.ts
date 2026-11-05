@@ -9,6 +9,7 @@
   let isWorkerJobPage = () => false;
   let getCurrentRecordId = () => null;
   let submitSuccessReported = false;
+  let counterIncludeRework = false;
   let __ankerLastCountedAt = 0;
   const __ankerCountDedupeWindow = 1500;
 
@@ -33,10 +34,12 @@
       }
     }
 
-    if (typeof obj.title === "string") {
-      const title = obj.title.trim();
+    for (const key of ["title", "taskTitle", "jobTitle", "taskName"]) {
+      if (typeof obj[key] !== "string") continue;
 
-      if (title && (title.includes("审核") || title.length > 5)) {
+      const title = obj[key].trim();
+
+      if (title && !detectedConfig.title) {
         detectedConfig.title = title;
       }
     }
@@ -116,37 +119,24 @@
   }
 
   function isReworkTask(url) {
-    if (!url) {
-      return false;
-    }
+    if (!url) return false;
 
     try {
       const absoluteUrl = new URL(String(url), location.origin);
-      const params = absoluteUrl.searchParams;
-
       for (const key of ["taskType", "jobType", "type", "reworkFlag", "isRework", "category"]) {
-        const value = params.get(key);
-
-        if (value && /rework/i.test(value)) {
-          return true;
-        }
+        const value = absoluteUrl.searchParams.get(key);
+        if (value && /rework/i.test(value)) return true;
       }
     } catch (_) {
-      if (/rework/i.test(String(url))) {
-        return true;
-      }
+      if (/rework/i.test(String(url))) return true;
     }
 
     try {
       const doc = (window.top && window.top.document) || document;
-      const bodyText = doc.body ? doc.body.innerText : "";
-
-      if (/\brework\b/i.test(bodyText)) {
-        return true;
-      }
-    } catch (_) {}
-
-    return false;
+      return /\brework\b/i.test(doc.body?.innerText || "");
+    } catch (_) {
+      return false;
+    }
   }
 
   function reportSubmitSuccess(url) {
@@ -154,9 +144,11 @@
       return;
     }
 
-    if (isReworkTask(url)) {
+    if (!counterIncludeRework && isReworkTask(url || location.href)) {
       console.log("[Anker Turbo] Skip submit counter for rework task.");
-      return;
+    } else if (window.top && typeof window.top.incrementAnkerCounter === "function") {
+      window.top.incrementAnkerCounter();
+      console.log("[Anker Turbo] +1 submit counter (API success).");
     }
 
     const now = Date.now();
@@ -166,11 +158,6 @@
     }
 
     __ankerLastCountedAt = now;
-
-    if (window.top && typeof window.top.incrementAnkerCounter === "function") {
-      window.top.incrementAnkerCounter();
-      console.log("[Anker Turbo] +1 submit counter (API success, non-rework). ");
-    }
 
     submitSuccessReported = true;
 
@@ -269,6 +256,23 @@
     detectedConfig = options.detectedConfig || {};
     isWorkerJobPage = options.isWorkerJobPage || isWorkerJobPage;
     getCurrentRecordId = options.getCurrentRecordId || getCurrentRecordId;
+    window.addEventListener("message", (event) => {
+      if (
+        event.source === window &&
+        event.data?.__ankerExtension === true &&
+        (event.data.type === "COUNTER_SETTINGS_RESPONSE" ||
+          event.data.type === "SETTINGS_CHANGED")
+      ) {
+        counterIncludeRework = Boolean(
+          event.data.counterIncludeRework ??
+            event.data.settings?.counterIncludeRework,
+        );
+      }
+    });
+    window.postMessage(
+      { __ankerExtension: true, type: "GET_COUNTER_SETTINGS" },
+      "*",
+    );
     installFetchHook();
     installXhrHook();
   }

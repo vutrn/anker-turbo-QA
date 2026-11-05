@@ -2,6 +2,7 @@
   "use strict";
 
   const ACTIVITY_INTERVAL_MS = 10 * 1000;
+  let activityInterval = null;
 
   function enableSilentAudioAntiSuspend() {
     if (window.__ankerTurboAudioContext) {
@@ -90,6 +91,10 @@
       return;
     }
 
+    if (activityInterval !== null) {
+      return;
+    }
+
     enableSilentAudioAntiSuspend();
     window.addEventListener("click", enableSilentAudioAntiSuspend, { once: true });
     window.addEventListener("keydown", enableSilentAudioAntiSuspend, { once: true });
@@ -101,10 +106,20 @@
       }
     });
 
-    setInterval(simulateUserActivity, ACTIVITY_INTERVAL_MS);
+    activityInterval = setInterval(simulateUserActivity, ACTIVITY_INTERVAL_MS);
     console.log("[Anti-Idle 6.6] Khởi chạy thành công.");
   }
 
+  function stop() {
+    if (activityInterval === null) {
+      return;
+    }
+
+    clearInterval(activityInterval);
+    activityInterval = null;
+    console.log("[Anti-Idle 6.6] Đã tắt.");
+  }
+
   AT.task = AT.task || {};
-  AT.task.antiIdle = { start };
+  AT.task.antiIdle = { start, stop };
 })(globalThis.AnkerTurbo);

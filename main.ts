@@ -244,7 +244,17 @@
 
     completedCount = 0;
 
-    registerController();
+    // START_QUEUE enables the background queue before the first FILL_QUEUE
+    // arrives. Sending only REGISTER_CONTROLLER here could race with the
+    // delayed fill and leave the queue stopped with no visible error.
+    window.postMessage(
+      {
+        __ankerExtension: true,
+        type: "START_QUEUE",
+        tasks: [],
+      },
+      "*",
+    );
 
     requestTurboDelay();
 
@@ -457,6 +467,14 @@
       return;
     }
 
+    if (data.type === "SETTINGS_CHANGED") {
+      applyAutoReloadSettings(
+        data.settings?.blankReload,
+        data.settings?.maxAutoReload,
+      );
+      return;
+    }
+
     // -------------------------------------------------
     // CLOSED TASK
     //
@@ -643,8 +661,11 @@
   window.ankerReviewDebug = function () {
     console.table(detectedConfig);
 
+    const reviewRows = AT.worker.reviewRows.getReviewRows();
+
     console.log({
       queueRunning,
+      reviewRows: reviewRows.length,
       openedCount,
       completedCount,
       activeTaskCount,

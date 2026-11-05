@@ -4,6 +4,9 @@ const NEXT_TAB_MESSAGE =
   globalThis.AnkerTurbo?.MSG?.NEXT_TAB || "NEXT_TAB";
 const HOTKEY_SETTINGS_REQUEST = "GET_HOTKEY_SETTINGS";
 const HOTKEY_SETTINGS_RESPONSE = "HOTKEY_SETTINGS_RESPONSE";
+const SUBMIT_HOTKEY_SETTINGS_RESPONSE = "SUBMIT_HOTKEY_SETTINGS_RESPONSE";
+const COUNTER_SETTINGS_RESPONSE = "COUNTER_SETTINGS_RESPONSE";
+const COUNTER_INCLUDE_REWORK_KEY = "counterIncludeRework";
 
 // =========================================================
 // ANKER TURBO BRIDGE
@@ -23,9 +26,11 @@ function isWorkerPage() {
 
 function sendToBackground(message) {
   try {
-    chrome.runtime.sendMessage(message).catch(() => {});
-  } catch (_) {
-    // Ignore
+    chrome.runtime.sendMessage(message).catch((error) => {
+      console.error("[Anker Turbo] Background message failed:", error);
+    });
+  } catch (error) {
+    console.error("[Anker Turbo] Failed to send background message:", error);
   }
 }
 
@@ -217,6 +222,30 @@ window.addEventListener("message", (event) => {
     return;
   }
 
+  if (data.type === "GET_COUNTER_SETTINGS") {
+    try {
+      chrome.storage.local
+        .get(COUNTER_INCLUDE_REWORK_KEY)
+        .then((result) => {
+          window.postMessage(
+            {
+              __ankerExtension: true,
+              type: COUNTER_SETTINGS_RESPONSE,
+              counterIncludeRework: Boolean(result[COUNTER_INCLUDE_REWORK_KEY]),
+            },
+            "*",
+          );
+        })
+        .catch((error) => {
+          console.error("[Anker Turbo] Failed to load counter settings:", error);
+        });
+    } catch (error) {
+      console.error("[Anker Turbo] Failed to request counter settings:", error);
+    }
+
+    return;
+  }
+
   if (data.type === HOTKEY_SETTINGS_REQUEST) {
     try {
       chrome.storage.local
@@ -234,6 +263,30 @@ window.addEventListener("message", (event) => {
         })
         .catch(() => {});
     } catch (_) {}
+
+    return;
+  }
+
+  if (data.type === "GET_SUBMIT_HOTKEY_SETTINGS") {
+    try {
+      chrome.storage.local
+        .get("hotkeySubmit")
+        .then((result) => {
+          window.postMessage(
+            {
+              __ankerExtension: true,
+              type: SUBMIT_HOTKEY_SETTINGS_RESPONSE,
+              hotkeySubmit: result.hotkeySubmit ?? "Backquote",
+            },
+            "*",
+          );
+        })
+        .catch((error) => {
+          console.error("[Anker Turbo] Failed to load submit shortcut:", error);
+        });
+    } catch (error) {
+      console.error("[Anker Turbo] Failed to request submit shortcut:", error);
+    }
 
     return;
   }
@@ -327,7 +380,31 @@ try {
   chrome.storage.onChanged.addListener((changes, area) => {
     if (area !== "local") return;
 
-    if (!changes.blankReload && !changes.maxAutoReload) return;
+    const relevantKeys = [
+      "blankReload",
+      "maxAutoReload",
+      "antiIdleEnabled",
+      "counterEnabled",
+      "counterIncludeRework",
+      "hotkeyFail",
+      "hotkeyPass",
+      "hotkeySubmit",
+    ];
+
+    if (!relevantKeys.some((key) => changes[key])) return;
+
+    chrome.storage.local.get(relevantKeys).then((settings) => {
+      window.postMessage(
+        {
+          __ankerExtension: true,
+          type: "SETTINGS_CHANGED",
+          settings,
+        },
+        "*",
+      );
+    }).catch((error) => {
+      console.error("[Anker Turbo] Failed to broadcast settings changes:", error);
+    });
 
     window.postMessage(
       {

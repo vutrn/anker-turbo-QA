@@ -12,7 +12,6 @@
     <div class="header">
       <div>
         <div class="eyebrow">ANKER TURBO</div>
-        <div class="title">Review workspace</div>
       </div>
       <div class="version">v2.2.1</div>
     </div>
@@ -79,8 +78,7 @@
 
     <main id="helpersPanel" class="tab-panel hidden" role="tabpanel">
       <div class="panel-heading">
-        <div class="panel-title">Task Helpers</div>
-        <div class="panel-description">Công cụ hỗ trợ thao tác gán và submit task nhanh hơn.</div>
+        <div class="panel-description">Hỗ trợ thao tác gán và submit task nhanh hơn.</div>
       </div>
 
       <label class="option-card">
@@ -89,13 +87,17 @@
           <strong>Counter widget</strong>
           <small>Đếm sản lượng submit thành công trong ngày</small>
         </span>
+        <span class="inline-option" title="Tính cả task rework vào counter">
+          <input id="counterIncludeRework" type="checkbox" />
+          <span>Rework</span>
+        </span>
       </label>
 
       <label class="option-card">
         <input id="antiIdleEnabled" type="checkbox" />
         <span>
           <strong>Anti-idle</strong>
-          <small>Giữ task hoạt động khi review trong thời gian dài</small>
+          <small>Giữ task hoạt động khi treo máy trong thời gian dài</small>
         </span>
       </label>
 

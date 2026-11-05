@@ -18,6 +18,8 @@ const separateTaskWindowInput = document.getElementById("separateTaskWindow") as
 
 const counterEnabledInput = document.getElementById("counterEnabled") as HTMLInputElement;
 
+const counterIncludeReworkInput = document.getElementById("counterIncludeRework") as HTMLInputElement;
+
 const antiIdleEnabledInput = document.getElementById("antiIdleEnabled") as HTMLInputElement;
 
 const hotkeyFailInput = document.getElementById("hotkeyFail") as HTMLInputElement;
@@ -102,6 +104,7 @@ async function loadSettings() {
       AT.STORAGE_KEYS.MAX_AUTO_RELOAD,
       AT.STORAGE_KEYS.SEPARATE_TASK_WINDOW,
       AT.STORAGE_KEYS.COUNTER_ENABLED,
+      AT.STORAGE_KEYS.COUNTER_INCLUDE_REWORK,
       AT.STORAGE_KEYS.ANTI_IDLE_ENABLED,
       AT.STORAGE_KEYS.HOTKEY_FAIL,
       AT.STORAGE_KEYS.HOTKEY_PASS,
@@ -115,6 +118,7 @@ async function loadSettings() {
       maxAutoReload: result[AT.STORAGE_KEYS.MAX_AUTO_RELOAD],
       separateTaskWindow: result[AT.STORAGE_KEYS.SEPARATE_TASK_WINDOW],
       counterEnabled: result[AT.STORAGE_KEYS.COUNTER_ENABLED],
+      counterIncludeRework: result[AT.STORAGE_KEYS.COUNTER_INCLUDE_REWORK],
       antiIdleEnabled: result[AT.STORAGE_KEYS.ANTI_IDLE_ENABLED],
       hotkeyFail: result[AT.STORAGE_KEYS.HOTKEY_FAIL],
       hotkeyPass: result[AT.STORAGE_KEYS.HOTKEY_PASS],
@@ -136,6 +140,7 @@ async function loadSettings() {
     separateTaskWindowInput.checked = settings.separateTaskWindow;
 
     counterEnabledInput.checked = settings.counterEnabled;
+    counterIncludeReworkInput.checked = settings.counterIncludeRework;
     antiIdleEnabledInput.checked = settings.antiIdleEnabled;
 
     setHotkeyInput(hotkeyFailInput, settings.hotkeyFail);
@@ -155,6 +160,7 @@ async function loadSettings() {
     separateTaskWindowInput.checked = AT.DEFAULTS.separateTaskWindow;
 
     counterEnabledInput.checked = AT.DEFAULTS.counterEnabled;
+    counterIncludeReworkInput.checked = AT.DEFAULTS.counterIncludeRework;
     antiIdleEnabledInput.checked = AT.DEFAULTS.antiIdleEnabled;
 
     setHotkeyInput(hotkeyFailInput, AT.DEFAULTS.hotkeyFail);
@@ -181,6 +187,7 @@ async function saveSettings() {
       maxAutoReload: maxAutoReloadInput.value,
       separateTaskWindow: separateTaskWindowInput.checked,
       counterEnabled: counterEnabledInput.checked,
+      counterIncludeRework: counterIncludeReworkInput.checked,
       antiIdleEnabled: antiIdleEnabledInput.checked,
       hotkeyFail: hotkeyFailInput.dataset.code,
       hotkeyPass: hotkeyPassInput.dataset.code,
@@ -193,6 +200,7 @@ async function saveSettings() {
     maxAutoReloadInput.value = String(settings.maxAutoReload);
     separateTaskWindowInput.checked = settings.separateTaskWindow;
     counterEnabledInput.checked = settings.counterEnabled;
+    counterIncludeReworkInput.checked = settings.counterIncludeRework;
     antiIdleEnabledInput.checked = settings.antiIdleEnabled;
     setHotkeyInput(hotkeyFailInput, settings.hotkeyFail);
     setHotkeyInput(hotkeyPassInput, settings.hotkeyPass);
@@ -205,6 +213,7 @@ async function saveSettings() {
       [AT.STORAGE_KEYS.MAX_AUTO_RELOAD]: settings.maxAutoReload,
       [AT.STORAGE_KEYS.SEPARATE_TASK_WINDOW]: settings.separateTaskWindow,
       [AT.STORAGE_KEYS.COUNTER_ENABLED]: settings.counterEnabled,
+      [AT.STORAGE_KEYS.COUNTER_INCLUDE_REWORK]: settings.counterIncludeRework,
       [AT.STORAGE_KEYS.ANTI_IDLE_ENABLED]: settings.antiIdleEnabled,
       [AT.STORAGE_KEYS.HOTKEY_FAIL]: settings.hotkeyFail,
       [AT.STORAGE_KEYS.HOTKEY_PASS]: settings.hotkeyPass,
