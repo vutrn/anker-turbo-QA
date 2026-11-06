@@ -32,10 +32,12 @@
       globalThis.AnkerTurbo?.STORAGE_KEYS?.ANTI_IDLE_ENABLED ?? "antiIdleEnabled",
       true,
     );
-    const counterEnabled = await loadTaskFeatureState(
-      globalThis.AnkerTurbo?.STORAGE_KEYS?.COUNTER_ENABLED ?? "counterEnabled",
-      true,
-    );
+    const counterEnabled =
+      isAssignedTaskPage() &&
+      (await loadTaskFeatureState(
+        globalThis.AnkerTurbo?.STORAGE_KEYS?.COUNTER_ENABLED ?? "counterEnabled",
+        true,
+      ));
 
     applyFeatureSettings({ antiIdleEnabled, counterEnabled });
 

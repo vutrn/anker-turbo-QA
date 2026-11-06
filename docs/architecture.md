@@ -24,7 +24,8 @@ the MAIN-world content scripts' compatibility with Manifest V3 while keeping
 the existing runtime boundaries.
 
 - `src/shared/`: namespace, constants, settings, and logging shared by contexts.
-- `src/content/task/`: behavior used only by `qa-task-start` pages.
+- `src/content/task/`: task-page behavior; the counter runs only on
+  `annotation-task-start` assignment pages, not `qa-task-start` review pages.
 - `src/content/worker/`: row filtering, review URL creation, and worker UI modules.
 - `main.ts`: current worker-page controller entry; compiled to `dist/main.js`.
 - `bridge.ts`: isolated relay between page messages and the Service Worker.

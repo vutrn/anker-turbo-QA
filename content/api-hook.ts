@@ -139,12 +139,18 @@
     }
   }
 
+  function isReviewTaskPage() {
+    return location.pathname.replace(/\/+$/, "") === "/ssr/qa-task-start";
+  }
+
   function reportSubmitSuccess(url) {
     if (isWorkerJobPage() || submitSuccessReported) {
       return;
     }
 
-    if (!counterIncludeRework && isReworkTask(url || location.href)) {
+    if (isReviewTaskPage()) {
+      console.log("[Anker Turbo] Skip submit counter for review task.");
+    } else if (!counterIncludeRework && isReworkTask(url || location.href)) {
       console.log("[Anker Turbo] Skip submit counter for rework task.");
     } else if (window.top && typeof window.top.incrementAnkerCounter === "function") {
       window.top.incrementAnkerCounter();
